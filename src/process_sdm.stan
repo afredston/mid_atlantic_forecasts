@@ -88,14 +88,43 @@ functions {
     return quant_position;
   } // close quantile function
   
-  /**
-  * Run the population model forward in time given temperature etc. Return numbers at age by patch for each year
-  * Go through and fill in this stuff would be good. 
-  * @param np number of patches
-  * @param ny_train number of years of training data
-  * @return an array of numbers by age, patch, and year
-  */
-  
+/**
+ * Run the population model forward in time given temperature etc. Return
+ * numbers at age by patch for each year
+ * @param np number of patches
+ * @param ny_train number of years of training data
+ * @param n_ages number of age classes
+ * @param n_lbins ??
+ * @param age_at_maturity initial age at which "movement is allowed"
+ * @param sbt sea bottom temperature
+ * @param Topt Optimal temperature
+ * @param width width for temperature suitability index
+ * @param exp_yn ?? (it's about how I_{p, t} is calculated)
+ * @param T_dep_mortality Binary: mortality depending on temperature?
+ * @param T_dep_movement Binary: movement depending on temperature?
+ * @param f_a_y f_{at}?
+ * @param m natural mortality (instantaneous) rate
+ * @param d isotropical dispersal rate
+ * @param beta_t ?? (associated to movement matrices)
+ * @param T_dep_recruitment flag for?
+ * @param spawner_recruit_relationship self explanatory flag?
+ * @param init_dep ??
+ * @param mean_recruits overall average recruitment (\mu_r?)
+ * @param beta_rec recruitment change per unit of I_{p, t}
+ * @param sigma_r conditional variance in the AR(1) process
+ * @param raw white noise (sigma_r * raw is the error term of the AR(1) process)
+ * @param r0 recruitment if population were not fished
+ * @param maturity_at_age ?? (used for SSB)
+ * @param wt_at_age ?? (used for SSB)
+ * @param alpha autocorr in the AR(1) term
+ * @param h steepness parameter of the Beverton-Holt model; it controls how
+ *    sensitive recruitment was to spawning stock biomass
+ * @param ssb0 theoretical max of spawning stock biomass
+ * @param d_at_age isotropic dispersal rate
+ * @param init_n_at_age N_{a, p, 1}?
+ * @param use_init_n_at_age flag for quantity above
+ * @return an array of numbers by age, patch, and year
+ */
   array[] matrix simulate_population(int np, int ny_train, int n_ages,
   int n_lbins, int age_at_maturity,
   matrix sbt, real Topt, real width,
@@ -109,10 +138,6 @@ functions {
   real r0, vector maturity_at_age,
   vector wt_at_age, real alpha, real h,
   real ssb0, vector d_at_age,
-  matrix l_at_a_key,
-  vector selectivity_at_bin,
-  real beta_obs_int, real beta_obs,
-  int number_quantiles,
   matrix init_n_at_age,
   int use_init_n_at_age) {
     //// define variables ////
@@ -238,9 +263,9 @@ functions {
         for (a in 1 : n_ages) {
           if (a == 1) {
             if (T_dep_recruitment == 1 && spawner_recruit_relationship == 0) {
-              n_at_age_hat[1, p, a] = init_dep[p] * mean_recruits * beta_rec
-              * T_adjust[p, 1]
-              * exp(sigma_r * raw[1]
+              n_at_age_hat[1, p, a] = init_dep[p] * mean_recruits * 
+              * exp(beta_rec * T_adjust[p, 1] +
+                    sigma_r * raw[1]
               - pow(sigma_r, 2) / 2); // initialize age 0 with mean recruitment in every patch
             }
             if (T_dep_recruitment == 0 && spawner_recruit_relationship == 0) {
@@ -255,9 +280,9 @@ functions {
             }
             if (T_dep_recruitment == 1 && spawner_recruit_relationship == 1) {
               n_at_age_hat[1, p, a] = init_dep[p] * r0
-              * exp(sigma_r * raw[1]
-              - pow(sigma_r, 2) / 2)
-              * T_adjust[p, 1] * beta_rec;
+              * exp(beta_rec * T_adjust[p, 1] +
+                    sigma_r * raw[1]
+              - pow(sigma_r, 2) / 2);
             }
           } // close age==1 case
           else {
@@ -289,8 +314,8 @@ functions {
         
         if (T_dep_recruitment == 1 && spawner_recruit_relationship == 0) {
           n_at_age_hat[y, p, 1] = mean_recruits
-          * exp(rec_dev[y - 1] - pow(sigma_r, 2) / 2)
-          * T_adjust[p, y - 1] * beta_rec;
+          * exp(beta_rec * T_adjust[p, 1] +
+                rec_dev[y - 1] - pow(sigma_r, 2) / 2);
         }
         if (T_dep_recruitment == 0 && spawner_recruit_relationship == 0) {
           n_at_age_hat[y, p, 1] = mean_recruits
