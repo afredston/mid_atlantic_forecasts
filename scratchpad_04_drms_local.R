@@ -106,9 +106,16 @@ test <- tidybayes::spread_draws(diagnostic_fit, density_hat[patch,year],theta[pa
 load(here("processed-data","stan_data_prep.Rdata"))
 
 
-  # visualize abundance over time
-  abund_p_y <-  dat_train_dens %>%
-    mutate(abundance = mean_dens * meanpatcharea)
+abund_p_y <-  dens %>%
+  as.data.frame() |>
+  mutate(patch = 1:np) |>
+  pivot_longer(
+    -patch,
+    names_to = "year",
+    values_to = "abundance",
+    names_prefix = "V",
+    names_transform = list(year = as.integer)
+  )
   
   test <- test |> 
     mutate(predicted_abundance = density_hat * theta) |> 
