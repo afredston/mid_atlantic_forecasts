@@ -3,6 +3,7 @@
 !/**/
 # and then this 'unignores' anything with an extension
 !*.*
+sandbox/
 *.rds
 *.pdf
 .Rproj.user

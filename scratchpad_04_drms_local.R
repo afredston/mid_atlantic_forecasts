@@ -29,9 +29,9 @@ ctrl_file <- read_csv("control_file.csv")
 ctrl_file <- read_csv("control_file.csv") %>%
   filter(
     eval_l_comps == 0,
-    spawner_recruit_relationship == 1,
+    spawner_recruit_relationship == 0,
     process_error_toggle == 0,
-    known_f == 0,
+    known_f == 1,
     T_dep_mortality == 0
   ) |>
   ungroup() |>
@@ -46,8 +46,8 @@ if (use_poisson_link){
 }
 make_plots <- TRUE
 write_summary <- TRUE
-iters <- 2000
-warmups <- 1000
+iters <- 1000
+warmups <- 500
 chains <- 4
 cores <- 4
 
@@ -103,6 +103,13 @@ diagnostic_fit$diagnostic_summary()
 
 test <- tidybayes::spread_draws(diagnostic_fit, density_hat[patch,year],theta[patch,year], ndraws  =100)
 
+habitat <- tidybayes::spread_draws(diagnostic_fit, habitat[patch], ndraws  =100)
+
+habitat |> 
+  ggplot(aes(habitat)) + 
+  geom_histogram() +
+  facet_wrap(~patch, scales = "free")
+
 load(here("processed-data","stan_data_prep.Rdata"))
 
 
@@ -116,14 +123,15 @@ abund_p_y <-  dens %>%
     names_prefix = "V",
     names_transform = list(year = as.integer)
   )
-  
-  test <- test |> 
-    mutate(predicted_abundance = density_hat * theta) |> 
+
+
+  together <- test |> 
+    mutate(predicted_abundance = density_hat / theta) |> 
     left_join(abund_p_y, by = c("patch", "year"))
   
   
-  test |> 
-    ggplot(aes(abundance, predicted_abundance / 10)) + 
+  together |> 
+    ggplot(aes(abundance, predicted_abundance)) + 
     geom_point(alpha = 0.25) + 
     geom_abline(slope = 1, intercept = 0, color = "red") + 
     geom_smooth(method = "lm") + 
@@ -138,7 +146,7 @@ abund_p_y <-  dens %>%
     ggplot(aes(year, density_hat)) +
     stat_lineribbon() +
     geom_point(data = abund_p_y, aes(year, abundance), color = "red") +
-    facet_wrap(~patch, scales = "free_y") +
+    facet_wrap(~patch) +
     labs(x="Year",y="Abundance", fill="Probability") +
     scale_fill_brewer()
   
