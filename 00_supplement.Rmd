@@ -20,12 +20,15 @@ library(tidyverse)
 library(here)
 library(ggplot2)
 library(kableExtra)
+library(tidybayes)
+library(ggridges)
 dat <- read_csv(here("processed-data","flounder_catch_at_length_fall_training.csv"))
 dat_test <- read_csv(here("processed-data","flounder_catch_at_length_fall_testing.csv"))
 dat_catchonly <- read_csv(here("processed-data","flounder_catch_fall_training.csv"))
 dat_test_catchonly <- read_csv(here("processed-data","flounder_catch_fall_testing.csv"))
 convergence_checks <- read_csv(file=here("results","convergence_checks.csv"))
 ctrl_file <- read_csv(file=here("control_file.csv"))
+best_models <- slice(ctrl_file, 60:64) # PLACEHOLDER!!!!!!!!!!!!!!!!!!!!!!!!!!
 ```
 
 ```{r opts, setup2, include=FALSE}
@@ -46,7 +49,7 @@ ctrl_dat <- cbind(id = ctrl_file$id, data.frame(ifelse(ctrl_dat == 0, "No", "Yes
 ctrl_dat <- left_join(ctrl_dat, convergence_checks %>% select(-low_ebfmi))
 
 ctrl_dat %>% 
-kbl(booktabs=TRUE, col.names=c("ID","Fit to Length","Movement ~ T","Recruitment ~ T", "Mortality ~ T", "Spawner-Recruit Rel.","Process Error", "Known F", "No. Successful Chains", "Mean Divergences"), caption="Description of dynamic range model (DRM) configurations used in the analysis. Model options included fitting to length data; including a temperature effect on movement, recruitment, or mortality; fitting a spawner-recruit relationship (i.e., positive density dependence); including a process error term; and using fishing mortality values from the summer flounder stock assessment. Two forms of model diagnostics are also reported: the number of successful chains (out of four) and the proportion of divergent iterations after warm-up.", digits=3) %>%
+  kbl(booktabs=TRUE, col.names=c("ID","Fit to Length","Movement ~ T","Recruitment ~ T", "Mortality ~ T", "Spawner-Recruit Rel.","Process Error", "Known F", "No. Successful Chains", "Mean Divergences"), caption="Description of dynamic range model (DRM) configurations used in the analysis. Model options included fitting to length data; including a temperature effect on movement, recruitment, or mortality; fitting a spawner-recruit relationship (i.e., positive density dependence); including a process error term; and using fishing mortality values from the summer flounder stock assessment. Two forms of model diagnostics are also reported: the number of successful chains (out of four) and the proportion of divergent iterations after warm-up.", digits=3) %>%
   kable_styling(font_size = 6, latex_options = c("striped"), full_width=TRUE)
 ```
 \clearpage
@@ -62,4 +65,58 @@ bind_rows(dat_catchonly, dat_test_catchonly) %>%
   theme_bw() 
 ```
 
+```{r important params, fig.cap="Posterior distributions of three important parameters from the best-fitting DRMs. These parameters are *d*, the annual dispersal rate between adjacent patches; *Topt*, the optimal temperature estimated for whichever process (movement or recruitment or mortality) was estimated as temperature-dependent; and *width*, a parameter controlling how sensitive the modeled process was to temperature. The best-fitting DRMs are described in EXPLAIN HERE."}
+out <- NULL
 
+for(i in best_models$id){
+  
+  results_path <- file.path(paste0('~/github/mid_atlantic_forecasts/results/',i))
+  
+  # get the Stan model and extract posteriors that we want for plots. slow! 
+  tmp_model <-  tryCatch(read_rds(file.path(results_path, "stan_model_fit.rds")))
+  
+  d <- gather_draws(tmp_model, d) %>% 
+    group_by(.iteration) %>% 
+    summarise(value = mean(.value)) %>%  # average across chains
+    select(value) %>% 
+    mutate(param = "d")
+  
+  Topt <- gather_draws(tmp_model, Topt) %>% 
+    group_by(.iteration) %>% 
+    summarise(value = mean(.value)) %>%  # average across chains
+    select(value) %>% 
+    mutate(param = "Topt")
+  
+  width <- gather_draws(tmp_model, width) %>% 
+    group_by(.iteration) %>% 
+    summarise(value = mean(.value)) %>%  # average across chains
+    select(value) %>% 
+    mutate(param = "width")
+  
+  tmp <- rbind(d, Topt, width) 
+  
+  tmp$id <- i
+  
+  out <- rbind(out, tmp)
+} # close for loop 
+
+out %>% 
+  ggplot(aes(x=value, y=id)) +
+   geom_density_ridges() + 
+  facet_wrap(~param, ncol=3, scales="free") +
+  labs(x=element_blank(), y="Model") +
+  theme_bw() 
+# observed_abund_posterior_predictive <- tidybayes::spread_draws(tmp_model, density_obs_proj[patch,year])
+# centroid_proj <- tidybayes::spread_draws(tmp_model, centroid_proj[year]) 
+# range_quantiles_proj <- tidybayes::spread_draws(tmp_model, range_quantiles_proj[quantile, year]) %>%
+#   mutate(quantile = as.factor(quantiles_calc[quantile]), .keep="unused") 
+# 
+# centroid_proj <- tidybayes::spread_draws(tmp_model, centroid_proj[year]) 
+# 
+# # plot important parameters 
+# plot(stan_model_fit, pars=c('sigma_r','sigma_obs','d','width','Topt','beta_obs','theta_d', "beta_t"))
+# plot(stan_model_fit, pars=c('sigma_r','sigma_obs','d','beta_obs','theta_d',"alpha"))
+# hist(extract(stan_model_fit, "mean_recruits")$mean_recruits)
+# quantile(extract(stan_model_fit, "Topt")$Topt)
+
+```
