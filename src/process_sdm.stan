@@ -9,7 +9,7 @@ functions {
       
       // return normal_lpdf(sbt | Topt, width);
       return log((1 / sqrt(2 * pi() * width))
-      * exp(-pow(sbt - Topt, 2) / (2 * pow(width, 2))));
+      * exp(-0.5 * square(sbt - Topt / width)));
     }
   }
   
@@ -89,13 +89,42 @@ functions {
   } // close quantile function
   
   /**
-  * Run the population model forward in time given temperature etc. Return numbers at age by patch for each year
-  * Go through and fill in this stuff would be good. 
-  * @param np number of patches
-  * @param ny_train number of years of training data
-  * @return an array of numbers by age, patch, and year
-  */
-  
+ * Run the population model forward in time given temperature etc. Return
+ * numbers at age by patch for each year
+ * @param np number of patches
+ * @param ny_train number of years of training data
+ * @param n_ages number of age classes
+ * @param n_lbins ??
+ * @param age_at_maturity initial age at which "movement is allowed"
+ * @param sbt sea bottom temperature
+ * @param Topt Optimal temperature
+ * @param width width for temperature suitability index
+ * @param exp_yn ?? (it's about how I_{p, t} is calculated)
+ * @param T_dep_mortality Binary: mortality depending on temperature?
+ * @param T_dep_movement Binary: movement depending on temperature?
+ * @param f_a_y f_{at}?
+ * @param m natural mortality (instantaneous) rate
+ * @param d isotropical dispersal rate
+ * @param beta_t ?? (associated to movement matrices)
+ * @param T_dep_recruitment flag for?
+ * @param spawner_recruit_relationship self explanatory flag?
+ * @param init_dep ??
+ * @param mean_recruits overall average recruitment (\mu_r?)
+ * @param beta_rec recruitment change per unit of I_{p, t}
+ * @param sigma_r conditional variance in the AR(1) process
+ * @param raw white noise (sigma_r * raw is the error term of the AR(1) process)
+ * @param r0 recruitment if population were not fished
+ * @param maturity_at_age ?? (used for SSB)
+ * @param wt_at_age ?? (used for SSB)
+ * @param alpha autocorr in the AR(1) term
+ * @param h steepness parameter of the Beverton-Holt model; it controls how
+ *    sensitive recruitment was to spawning stock biomass
+ * @param ssb0 theoretical max of spawning stock biomass
+ * @param d_at_age isotropic dispersal rate
+ * @param init_n_at_age N_{a, p, 1}?
+ * @param use_init_n_at_age flag for quantity above
+ * @return an array of numbers by age, patch, and year
+ */
   array[] matrix simulate_population(int np, int ny_train, int n_ages,
   int n_lbins, int age_at_maturity,
   matrix sbt, real Topt, real width,
@@ -106,7 +135,7 @@ functions {
   int spawner_recruit_relationship,
   vector init_dep, real mean_recruits,
  // real beta_rec, 
-  real sigma_r, vector raw,
+  real sigma_r, vector rec_dev,
   real r0, vector maturity_at_age,
   vector wt_at_age, real alpha, real h,
   real ssb0, vector d_at_age,
@@ -140,7 +169,7 @@ functions {
     
     matrix[np, ny_train] ssb;
     
-    vector[ny_train - 1] rec_dev; // recruitment deviates in each year (shared across all patches, for better or worse)
+    // vector[ny_train - 1] rec_dev; // recruitment deviates in each year (shared across all patches, for better or worse)
     
     vector[np] v_in; // vector for matrix multiplication 
     
@@ -241,23 +270,19 @@ functions {
             if (T_dep_recruitment == 1 && spawner_recruit_relationship == 0) {
               n_at_age_hat[1, p, a] = init_dep[p] * mean_recruits // * beta_rec
               * T_adjust[p, 1]
-              * exp(sigma_r * raw[1]
-              - pow(sigma_r, 2) / 2); // initialize age 0 with mean recruitment in every patch
+              * exp(rec_dev[1]); // initialize age 0 with mean recruitment in every patch
             }
             if (T_dep_recruitment == 0 && spawner_recruit_relationship == 0) {
               n_at_age_hat[1, p, a] = init_dep[p] * mean_recruits
-              * exp(sigma_r * raw[1]
-              - pow(sigma_r, 2) / 2); // initialize age 0 with mean recruitment in every patch
+              * exp(rec_dev[1]); // initialize age 0 with mean recruitment in every patch
             }
             if (T_dep_recruitment == 0 && spawner_recruit_relationship == 1) {
               n_at_age_hat[1, p, a] = init_dep[p] * r0
-              * exp(sigma_r * raw[1]
-              - pow(sigma_r, 2) / 2); // scale it down a bit -- historical fishing was still occurring
+              * exp(rec_dev[1]); // scale it down a bit -- historical fishing was still occurring
             }
             if (T_dep_recruitment == 1 && spawner_recruit_relationship == 1) {
               n_at_age_hat[1, p, a] = init_dep[p] * r0
-              * exp(sigma_r * raw[1]
-              - pow(sigma_r, 2) / 2)
+              * exp(rec_dev[1])
               * T_adjust[p, 1] //* beta_rec
               ;
             }
@@ -277,27 +302,19 @@ functions {
     //// run population model  ////
     
     for (y in 2 : ny_train) {
-      if (y == 2) {
-        rec_dev[y - 1] = sigma_r * raw[y]; // initialize first year of rec_dev with raw (process error) -- now not patch-specific
-      } // close y==2 case  
-      else {
-        rec_dev[y - 1] = alpha * rec_dev[y - 2]
-        + sqrt(1 - pow(alpha, 2)) * sigma_r * raw[y];
-      } // close ifelse
-      
       // describe population dynamics
       for (p in 1 : np) {
         // density-independent, temperature-dependent recruitment of age 1
-        
+        // Why rec_dev[y - 1] instead of rec_dev[y] here?
         if (T_dep_recruitment == 1 && spawner_recruit_relationship == 0) {
           n_at_age_hat[y, p, 1] = mean_recruits
-          * exp(rec_dev[y - 1] - pow(sigma_r, 2) / 2)
+          * exp(rec_dev[y - 1])
           * T_adjust[p, y - 1] //* beta_rec
           ;
         }
         if (T_dep_recruitment == 0 && spawner_recruit_relationship == 0) {
           n_at_age_hat[y, p, 1] = mean_recruits
-          * exp(rec_dev[y - 1] - pow(sigma_r, 2) / 2);
+          * exp(rec_dev[y - 1]);
         }
         
         if (T_dep_recruitment == 0 && spawner_recruit_relationship == 1) {
@@ -306,7 +323,7 @@ functions {
           + ssb[p, y - 1] * (h - 0.2));
           
           n_at_age_hat[y, p, 1] = n_at_age_hat[y, p, 1]
-          * exp(rec_dev[y - 1] - pow(sigma_r, 2) / 2);
+          * exp(rec_dev[y - 1]);
         }
         if (T_dep_recruitment == 1 && spawner_recruit_relationship == 1) {
           n_at_age_hat[y, p, 1] = ((0.8 * r0 * h * ssb[p, y - 1])
@@ -315,7 +332,7 @@ functions {
           * T_adjust[p, y - 1];
           
           n_at_age_hat[y, p, 1] = n_at_age_hat[y, p, 1]
-          * exp(rec_dev[y - 1] - pow(sigma_r, 2) / 2);
+          * exp(rec_dev[y - 1]);
         }
         // 
         // why estimate raw and sigma_r? we want to estimate process error
@@ -561,17 +578,22 @@ parameters {
   
   real<lower=1e-6> sigma_obs;
   
-  real<lower=1e-6> sigma_r_raw;
-  
   real<lower=0.5> width; // sensitivity to temperature variation
   
   real Topt; //  temp at which recruitment is maximized
   
-  real<lower=0, upper=0.99> alpha; // autocorrelation term
-  
   real log_mean_recruits; // log mean recruits per patch, changed to one value for all space/time
-  
-  vector[ny_train] raw; // array of raw recruitment deviates, changed to one value per year
+
+  // conditional SD from the residual
+  // parameter will have dimension zero when toggle is turned off.
+  array[process_error_toggle ? 1 : 0] real<lower=0> sigma_r;
+
+  // autoregressive parameter
+  // in theory, this parameter could be negative too.
+  array[process_error_toggle ? 1 : 0] real<lower = 0, upper = 1> alpha;
+
+  // array of raw recruitment deviates, changed to one value per year
+  vector[process_error_toggle ? ny_train : 0] raw; 
   
   real<upper=0.8> p_length_50_sel; // length at 50% selectivity
   
@@ -622,7 +644,7 @@ transformed parameters {
   
   // real sigma_obs = sigma_total / 2;
   
-  real sigma_r;
+  // real sigma_r; see L589
   
   vector[n_ages] d_at_age; // storage for diffusion at age
   
@@ -644,7 +666,25 @@ transformed parameters {
   
   r0 = exp(log_r0);
   
-  sigma_r = sigma_r_raw * process_error_toggle;
+  // AR process
+  vector[process_error_toggle ? ny_train : 0] rec_dev;
+  vector[process_error_toggle ? ny_train : 0] lagged_rec_dev;
+  if (process_error_toggle) {
+    rec_dev = sigma_r[1] * raw;
+    for (tp in 2:ny_train) {
+      lagged_rec_dev[tp] = rec_dev[tp - 1];
+      rec_dev[tp] += alpha[1] * lagged_rec_dev[tp];
+    }
+  }
+
+  // THIS ONE WILL BE USED AT `simulate_population`
+  // when using the traditional AR(1); sigma_r / (1 - alpha^2) is
+  // the marginal SD.
+  vector[ny_train] rt;
+  rt = rep_vector(0.0, ny_proj);
+  if(process_error_toggle) {
+    rt += rec_dev - 0.5 * square(sigma_r[1] / (1 - square(alpha[1])));
+  }
   
   ssb0 = -999;
   
@@ -672,8 +712,8 @@ transformed parameters {
   f, m, d, beta_t, T_dep_recruitment,
   spawner_recruit_relationship, init_dep,
   mean_recruits,// beta_rec, 
-  sigma_r, raw,
-  r0, maturity_at_age, wt_at_age, alpha,
+  sigma_r[1], rt,
+  r0, maturity_at_age, wt_at_age, alpha[1],
   h, ssb0, d_at_age, l_at_a_key,
   selectivity_at_bin, beta_obs_int,
   beta_obs, number_quantiles,
@@ -736,9 +776,14 @@ model {
   
   beta_obs_int ~ normal(pr_beta_obs_int_mu, pr_beta_obs_int_sigma);
   
-  raw ~ normal(pr_raw_mu, pr_raw_sigma);
-  
-  sigma_r_raw ~ normal(pr_sigma_r_raw_mu, pr_sigma_r_raw_sigma);
+  if (process_error_toggle) {
+    // the target is similar to the "~" syntax. However, it is more appropriate
+    // when using toggles (imo)
+    target += normal_lpdf(sigma_r[1] | pr_sigma_r_raw_mu, pr_sigma_r_raw_sigma) -
+      - 1 * normal_lccdf(sigma_r[1] | pr_sigma_r_raw_mu, pr_sigma_r_raw_sigma);
+    target += normal_lpdf(raw | pr_raw_mu, pr_raw_sigma);
+    target += beta_lpdf(alpha | pr_alpha_alpha, pr_alpha_beta); 
+  }
   
   sigma_obs ~ normal(pr_sigma_obs_mu, pr_sigma_obs_sigma);
   
@@ -753,8 +798,6 @@ model {
   beta_t ~ normal(pr_beta_t_mu, pr_beta_t_sigma);
   
  // beta_rec ~ normal(pr_beta_rec_mu, pr_beta_rec_sigma);
-  
-  alpha ~ beta(pr_alpha_alpha, pr_alpha_beta); 
   
   d ~ normal(pr_d_mu, pr_d_sigma); 
   
@@ -795,13 +838,13 @@ model {
         
         if (use_poisson_link == 1){
           
-          log(dens[p, y]) ~ normal(log((density_hat[p, y] + 1e-6)/ (theta[p,y] + 1e-6)) - pow(sigma_obs,2)/2, sigma_obs);
+          log(dens[p, y]) ~ normal(log((density_hat[p, y] + 1e-6)/ (theta[p,y] + 1e-6)) - square(sigma_obs)/2, sigma_obs);
           
         } else {
           
           if (density_hat[p, y] > 0 && theta[p,y] > 0){
             
-            log(dens[p, y]) ~ normal(log((density_hat[p, y] + 1e-6) / (theta[p,y] + 1e-6)) - pow(sigma_obs,2)/2, sigma_obs);
+            log(dens[p, y]) ~ normal(log((density_hat[p, y] + 1e-6) / (theta[p,y] + 1e-6)) - square(sigma_obs)/2, sigma_obs);
             
           }
         }
@@ -823,7 +866,10 @@ generated quantities {
   array[np, ny_proj + 1] real density_obs_proj;
   array[np, ny_proj + 1] real density_proj;
   vector[ny_proj + 1] total_density_proj; 
-  vector[ny_proj + 1] raw_proj;
+  // only generates raw_proj when `run_forecast` is true
+  vector[run_forecast ? (ny_proj + 1) : 0] raw_proj;
+  vector[ny_proj + 1] rec_proj;
+  vector[run_forecast ? (ny_proj + 1) : 0] lagged_rec_proj;
   array[ny_proj] matrix[np, n_lbins] proj_n_at_length_hat;
   vector[ny_proj + 1] centroid_proj;
   matrix[number_quantiles, ny_proj + 1] range_quantiles_proj;
@@ -832,6 +878,23 @@ generated quantities {
   //// generate posterior predictive distributions for training data ////
   
   for (y in 1 : ny_train) {
+    // AR process
+    if (process_error_toggle) {
+      rec_proj = sigma_r[1] * raw_proj;
+      for (tp in 1:ny_proj) {
+        if (tp == 1) {
+          // uses the last timepoint from the train in the AR evolution. In the
+          // previous version, the "history" of the AR process was ignored at
+          // the time of the projection
+          lagged_rec_proj[tp] = sigma_r[1] * raw[ny_train];
+        } else {
+          lagged_rec_proj[tp] = rec_proj[tp - 1];
+        }
+        rec_proj[tp] += alpha[1] * lagged_rec_proj[tp];
+      }
+    } else {
+      rec_proj = rep_vector(0.0, ny_proj + 1);
+    }
     for (p in 1 : np) {
       // ignoring error around length sampling for now
       // add in poisson toggle here
@@ -841,7 +904,7 @@ generated quantities {
         if (theta[p,y] > 0){
           
           dens_pp[p, y] = bernoulli_rng(theta[p, y])
-          * exp(normal_rng(log(density_hat[p, y] / theta[p,y] + 1e-3) - pow(sigma_obs,2)/2,
+          * exp(normal_rng(log(density_hat[p, y] / theta[p,y] + 1e-3) - square(sigma_obs)/2,
           sigma_obs));
         } else {
           dens_pp[p, y] = 0;
@@ -868,8 +931,8 @@ generated quantities {
     T_dep_recruitment,
     spawner_recruit_relationship,
     init_dep, mean_recruits,// beta_rec,
-    sigma_r, raw_proj, r0,
-    maturity_at_age, wt_at_age, alpha, h,
+    sigma_r[1], rec_proj, r0,
+    maturity_at_age, wt_at_age, alpha[1], h,
     ssb0, d_at_age, l_at_a_key,
     selectivity_at_bin, beta_obs_int,
     beta_obs, number_quantiles,
@@ -925,4 +988,3 @@ generated quantities {
   } // close run_forecast
 }
 // close generated quantities run_forecast
-
