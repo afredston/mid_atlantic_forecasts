@@ -799,13 +799,13 @@ model {
         
         if (use_poisson_link == 1){
           
-          log(dens[p, y]) ~ normal(log((density_hat[p, y] + 1e-6) / (theta[p,y] + 1e-6)) - pow(sigma_obs,2)/2, sigma_obs);
+          log(dens[p, y]) ~ normal(log((density_hat[p, y] + 1e-6) / (theta[p,y] + 1e-6)) - square(sigma_obs)/2, sigma_obs);
           
         } else {
           
           if (density_hat[p, y] > 0 && theta[p,y] > 0){
             
-            log(dens[p, y]) ~ normal(log((density_hat[p, y] + 1e-6) / (theta[p,y] + 1e-6)) - pow(sigma_obs,2)/2, sigma_obs);
+            log(dens[p, y]) ~ normal(log((density_hat[p, y] + 1e-6) / (theta[p,y] + 1e-6)) - square(sigma_obs)/2, sigma_obs);
             
           }
         }
@@ -845,7 +845,7 @@ generated quantities {
         if (theta[p,y] > 0){
           
           dens_pp[p, y] = bernoulli_rng(theta[p, y])
-          * exp(normal_rng(log(density_hat[p, y] / theta[p,y] + 1e-3) - pow(sigma_obs,2)/2,
+          * exp(normal_rng(log(density_hat[p, y] / theta[p,y] + 1e-3) - square(sigma_obs)/2,
           sigma_obs));
         } else {
           dens_pp[p, y] = 0;
@@ -853,7 +853,7 @@ generated quantities {
       } else {
         
         dens_pp[p, y] = bernoulli_rng(theta[p, y])
-        * exp(normal_rng(log(density_hat[p, y] + 1e-6),
+        * exp(normal_rng(log(density_hat[p, y] + 1e-6) - square(sigma_obs) / 2,
         sigma_obs));
       }
       
@@ -907,8 +907,7 @@ generated quantities {
       }
         
         density_obs_proj[p, y] = bernoulli_rng(theta_proj[p, y])
-        * exp(normal_rng(log((density_proj[p, y] + 1e-6) / theta_proj[p, y]
-        ),
+        * exp(normal_rng(log((density_proj[p, y])) - square(sigma_obs) / 2,
         sigma_obs));
         // the observed densitieis as opposed to the true densities
       } // close patches 

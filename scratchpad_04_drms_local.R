@@ -32,13 +32,13 @@ ctrl_file <- read_csv("control_file.csv") %>%
     spawner_recruit_relationship == 0,
     process_error_toggle == 0,
     known_f == 1,
-    T_dep_mortality == 0
+    T_dep_mortality == 1
   ) |>
   ungroup() |>
   slice(1)
 
 fit_drms <- TRUE
-use_poisson_link <- FALSE
+use_poisson_link <- TRUE
 if (use_poisson_link){
   run_name <- "yes-pois"
 } else {
@@ -46,8 +46,8 @@ if (use_poisson_link){
 }
 make_plots <- TRUE
 write_summary <- TRUE
-iters <- 1000
-warmups <- 500
+iters <- 10000
+warmups <- 5000
 chains <- 4
 cores <- 4
 

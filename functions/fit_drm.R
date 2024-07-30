@@ -186,7 +186,6 @@ fit_drm <- function(amarel = FALSE,
   drm_model <- cmdstan_model( here::here("src",paste0(drm_name, ".stan")))
   
   stan_model_fit = drm_model$sample(
-    output_dir = "sandbox",
     data = stan_data,
     chains = chains,
     iter_warmup = warmup,
