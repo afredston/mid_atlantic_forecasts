@@ -426,7 +426,7 @@ data {
   
   array[np, ny_train] real dens; // MEAN density of individuals of any age in each haul; used for rescaling the abundance to fit to our data
   
-  vector[np] area; // mean area swept per patch 
+  // vector[np] area; // mean area swept per patch 
   
   // environmental data 
   
@@ -691,9 +691,9 @@ transformed parameters {
       }
       
       if (use_poisson_link == 1){
-        
-        theta[p, y] = 1 - exp(-area[p] * density_hat[p, y]);
-        
+        // commenting out option with patch-varying area 
+       // theta[p, y] = 1 - exp(-area[p] * density_hat[p, y]);
+        theta[p, y] = 1 - exp(-density_hat[p, y]);
       } else {
         
         // if not using Poisson link, calculate encounter probability with lognormal dsitribution 
@@ -892,7 +892,7 @@ generated quantities {
         
       if (use_poisson_link == 1){
         
-        theta_proj[p, y] = 1 - exp(-area[p] * density_proj[p, y]);
+        theta_proj[p, y] = 1 - exp(-density_proj[p, y]);
         
       } else {
         theta_proj[p, y] = 1

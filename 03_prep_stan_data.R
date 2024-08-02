@@ -33,6 +33,7 @@ length_50_sel_guess= 20
 age_sel= 0
 sel_100 = 3 # this is actually age 2, but we start counting ages at 0 (recruits), hence the 3 passed to Stan here 
 h = 0.8
+use_constant_patch_area <- TRUE 
 
 # the f-at-age data starts in 1982; fill in the previous years with the earliest year of data
 f_early <- expand_grid(year=seq(1972, 1981, 1), age=unique(dat_f_age_prep$age)) %>% 
@@ -95,11 +96,11 @@ years_proj <- sort(unique(dat_test_lengths$year))
 ny <- length(years)
 ny_proj <- length(years_proj)
 
-# get patch area 
-patchdat_prep <- dat %>% 
+# get patch area
+patchdat_prep <- dat %>%
   select(year, lat, lon) %>%
   distinct() %>%
-  mutate(lat_floor = floor(lat)) %>% 
+  mutate(lat_floor = floor(lat)) %>%
   filter(lat_floor %in% patches)
 
 patchareas <- NULL
@@ -121,9 +122,17 @@ for(i in 1:np){
 patchareas <- patchareas %>% 
   mutate(area_km2 = as.numeric(area_m2 / 1e6), .keep="unused")
 
-patchareas$lat_floor <- patches
-
-area <- patchareas$area_km2
+# we are using a fixed patch size but leaving in the code to let it vary 
+if(use_constant_patch_area==FALSE){
+  
+  patchareas$lat_floor <- patches
+  
+  patcharea <- patchareas$area_km2
+}else{
+  
+  patchareas$area_km2 <- mean(patchareas$area_km2)
+  patcharea <- mean(patchareas$area_km2)
+}
 
 # get temperature data
 dat_train_sbt <- dat %>%   
@@ -226,8 +235,7 @@ dat_train_sbt$year= as.integer(as.factor(dat_train_sbt$year))
 dat_f_age$year = as.integer(as.factor(dat_f_age$year))
 dat_f_age_proj$year = as.integer(as.factor(dat_f_age_proj$year))
 
-# reshape all data for Stan 
-# make matrices/arrays from dfs -- slow 
+# make matrices/arrays from dfs -- slow! 
 len <- array(0, dim = c(np, n_lbins, ny)) 
 for(p in 1:np){
   for(l in 1:n_lbins){
@@ -243,13 +251,25 @@ for(p in 1:np){
 # plot(len[4,,20])
 
 dens <- array(NA, dim=c(np, ny))
-for(p in 1:np){
-  for(y in 1:ny){
-    tmp2 <- dat_train_dens %>% filter(patch==p, year==y) 
-    patcharea_p <- area[p]
-    dens[p,y] <- tmp2$mean_dens * (1/0.0384) * patcharea_p
-    # converting fish/tow to fish
-    # mean counts (in fish/tow) * tows/km2 * km2 ==> fish 
+if(use_constant_patch_area==FALSE){
+  for(p in 1:np){
+    for(y in 1:ny){
+      tmp2 <- dat_train_dens %>% filter(patch==p, year==y) 
+      patcharea_p <- patcharea[p]
+      dens[p,y] <- tmp2$mean_dens * (1/0.0384) * patcharea_p
+      # converting fish/tow to fish
+      # mean counts (in fish/tow) * tows/km2 * km2 ==> fish 
+    }
+  }
+}
+if(use_constant_patch_area==TRUE){
+  for(p in 1:np){
+    for(y in 1:ny){
+      tmp2 <- dat_train_dens %>% filter(patch==p, year==y) 
+      dens[p,y] <- tmp2$mean_dens * (1/0.0384) * patcharea
+      # converting fish/tow to fish
+      # mean counts (in fish/tow) * tows/km2 * km2 ==> fish 
+    }
   }
 }
 
@@ -296,7 +316,7 @@ bin_mids=lbins+0.5
 save(
   dat_train_dens,
   dat_test_dens,
-  area,
+  patcharea,
   np,
   n_ages,
   ny,
