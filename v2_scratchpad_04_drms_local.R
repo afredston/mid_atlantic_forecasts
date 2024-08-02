@@ -27,16 +27,15 @@ quantiles_calc <- c(0.95, 0.95, 0.95)
 
 ctrl_file <- read_csv("control_file.csv")
 ctrl_file <- read_csv("control_file.csv") %>%
-  filter(id == "v0.64")
-  # filter(
-  #   eval_l_comps == 0,
-  #   spawner_recruit_relationship == 1,
-  #   process_error_toggle == 0,
-  #   known_f == 0,
-  #   T_dep_mortality == 0
-  # ) |>
-  # ungroup() |>
-  # slice(1)
+  filter(
+    eval_l_comps == 0,
+    spawner_recruit_relationship == 1,
+    process_error_toggle == 0,
+    known_f == 0,
+    T_dep_mortality == 0
+  ) |>
+  ungroup() |>
+  slice(1)
 
 fit_drms <- TRUE
 use_poisson_link <- FALSE
@@ -87,7 +86,7 @@ for(k in 1:nrow(ctrl_file)){
       iter = iters,
       chains = chains,
       cores = cores,
-      adapt_delta = 0.85, 
+      adapt_delta = 0.99, 
       run_forecast = 1,
       quantiles_calc = quantiles_calc, 
     )
@@ -117,31 +116,31 @@ abund_p_y <-  dens %>%
     names_prefix = "V",
     names_transform = list(year = as.integer)
   )
-  
-  test <- test |> 
-    mutate(predicted_abundance = density_hat * theta) |> 
-    left_join(abund_p_y, by = c("patch", "year"))
-  
-  
-  test |> 
-    ggplot(aes(abundance, predicted_abundance / 10)) + 
-    geom_point(alpha = 0.25) + 
-    geom_abline(slope = 1, intercept = 0, color = "red") + 
-    geom_smooth(method = "lm") + 
-    scale_x_continuous("Observed Number Density") + 
-    scale_y_continuous(name = "Probability of occurance * Predicted Number Density") + 
-    theme_minimal()
-  
-  
-  abund_p_y_hat <- tidybayes::spread_draws(diagnostic_fit, density_hat[patch,year], ndraws  =100)
-  
-  abundance_v_time <- abund_p_y_hat %>%
-    ggplot(aes(year, density_hat)) +
-    stat_lineribbon() +
-    geom_point(data = abund_p_y, aes(year, abundance), color = "red") +
-    facet_wrap(~patch, scales = "free_y") +
-    labs(x="Year",y="Abundance", fill="Probability") +
-    scale_fill_brewer()
-  
-  abundance_v_time
+
+test <- test |> 
+  mutate(predicted_abundance = density_hat * theta) |> 
+  left_join(abund_p_y, by = c("patch", "year"))
+
+
+test |> 
+  ggplot(aes(abundance, predicted_abundance / 10)) + 
+  geom_point(alpha = 0.25) + 
+  geom_abline(slope = 1, intercept = 0, color = "red") + 
+  geom_smooth(method = "lm") + 
+  scale_x_continuous("Observed Number Density") + 
+  scale_y_continuous(name = "Probability of occurance * Predicted Number Density") + 
+  theme_minimal()
+
+
+abund_p_y_hat <- tidybayes::spread_draws(diagnostic_fit, density_hat[patch,year], ndraws  =100)
+
+abundance_v_time <- abund_p_y_hat %>%
+  ggplot(aes(year, density_hat)) +
+  stat_lineribbon() +
+  geom_point(data = abund_p_y, aes(year, abundance), color = "red") +
+  facet_wrap(~patch, scales = "free_y") +
+  labs(x="Year",y="Abundance", fill="Probability") +
+  scale_fill_brewer()
+
+abundance_v_time
 
