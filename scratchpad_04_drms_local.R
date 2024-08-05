@@ -90,7 +90,7 @@ for(k in 1:nrow(ctrl_file)){
       adapt_delta = 0.85, 
       run_forecast = 1,
       quantiles_calc = quantiles_calc,
-      drm_name = "process_sdm_v2",
+      drm_name = "process_sdm",
       patch_r0s = 1
     )
     ) 
