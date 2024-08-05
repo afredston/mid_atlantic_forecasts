@@ -522,6 +522,7 @@ data {
   real pr_sel_delta_sigma; 
   real pr_theta_d_mu;
   real pr_theta_d_sigma; 
+  int<lower = 0, upper = 1> patch_r0s;
   
 }
 transformed data {
@@ -561,7 +562,7 @@ transformed data {
 parameters {
   // real<lower = 1e-6> sigma_total;
   
-  real<lower=0, upper = 1000> sigma_obs; // upper as a cap for edge cases where sigma_obs goes to inf
+  real<lower=0, upper = 200> sigma_obs; // upper as a cap for edge cases where sigma_obs goes to inf
   
   real<lower=0> sigma_r_raw;
   
@@ -638,7 +639,12 @@ transformed parameters {
   
   unfished = rep_vector(0, n_ages);
   
-  capacity = habitat;
+  if (patch_r0s == 1){
+      capacity = habitat;
+
+  } else {
+    capacity = rep_vector(1.0 / np,np);
+  }
   
   for (a in 1 : n_ages) {
     if (a >= age_at_maturity) {
@@ -810,8 +816,13 @@ model {
           // }
         } else {
           
+          // print("d is ",density_hat[p, y]);
+          // 
+          // print("theta is ",theta[p, y]);
+          // 
+          // print("habitat is", capacity[p]);
 
-            log(dens[p, y]) ~ normal(log(density_hat[p, y] / (theta[p,y] + 1e-6)) - square(sigma_obs)/2, sigma_obs);
+            log(dens[p, y]) ~ normal(log((density_hat[p, y] + 1e-6) / (theta[p,y] + 1e-6)) - square(sigma_obs)/2, sigma_obs);
             
         }
         

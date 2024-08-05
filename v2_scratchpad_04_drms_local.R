@@ -44,12 +44,13 @@ if (use_poisson_link){
 } else {
   run_name <- "no-pois"
 }
+run_name <- "wtf"
 make_plots <- TRUE
 write_summary <- TRUE
 iters <- 2000
 warmups <- 1000
-chains <- 4
-cores <- 4
+chains <- 2
+cores <- 2
 
 ctrl_file <- ctrl_file |> 
   slice(1)
@@ -86,9 +87,10 @@ for(k in 1:nrow(ctrl_file)){
       iter = iters,
       chains = chains,
       cores = cores,
-      adapt_delta = 0.99, 
+      adapt_delta = 0.8, 
       run_forecast = 1,
       quantiles_calc = quantiles_calc, 
+      drm_name = "main_process_sdm"
     )
     ) 
     )# as currently written this just adds a column to drm_fits that says "all done". the column `fits` used to contain the model object itself 
@@ -101,7 +103,107 @@ diagnostic_fit <- read_rds(here("results",run_name, "stan_model_fit.rds"))
 
 diagnostic_fit$diagnostic_summary()
 
-test <- tidybayes::spread_draws(diagnostic_fit, density_hat[patch,year],theta[patch,year], ndraws  =100)
+draws <- diagnostic_fit$draws(format = "df")
+
+posterior_drm <- posterior::as_draws_array(diagnostic_fit)
+
+nuts_diagnostics <- bayesplot::nuts_params(diagnostic_fit)
+
+diagnostic_fit$metadata()$model_params
+
+mcmc_parcoord(
+  posterior_drm,
+  pars = vars(
+    "sigma_obs",
+    "log_r0"
+  ),
+  np = nuts_diagnostics,
+  transformations = scale
+)
+
+# "sigma_r_raw",
+# "width",
+# "Topt",
+# "alpha",
+# "sel_delta",
+# "p_length_50_sel",
+# "beta_obs",
+# "theta_d",
+# "beta_t",
+# "beta_obs_int",
+
+diagnostics <- diagnostic_fit$sampler_diagnostics(format = "df")
+
+diagnostics
+
+
+
+
+test <- tidybayes::spread_draws(
+  diagnostic_fit,
+  log_r0,
+  sigma_obs
+) 
+
+# test <- tidybayes::spread_draws(
+#   diagnostic_fit,
+#   d,
+#   theta[patch, year],
+#   alpha,
+#   init_dep[patch],
+#   sigma_obs,
+#   sigma_r_raw,
+#   log_r0,
+#   p_length_50_sel,
+#   Topt,
+#   width,
+#   beta_obs_int,
+#   beta_obs
+# ) 
+diagnostic_frame <- test |> 
+  left_join(diagnostics) |> 
+  mutate(divergent = divergent__) |> 
+  mutate(rando = rnorm(length(divergent)))
+
+diagnostics |> 
+  group_by(.chain) |> 
+  summarise(d = mean(divergent__ == 1))
+
+diagnostic_frame |> 
+  ggplot(aes(sigma_obs, log_r0, color = divergent__)) +
+  geom_point()
+
+diagnostic_frame |> 
+  ggplot(aes(log_r0, divergent__)) +
+  geom_point()
+
+divergent_drivers <- ranger(divergent ~ ., data = diagnostic_frame |> select(-contains("__"),-starts_with(".")), importance = "permutation", num.trees = 5000, classification = TRUE)
+
+vip(divergent_drivers,
+    num_features = 20)
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+
+# plot mytree
+divergent_drivers <- rpart(
+  divergent ~ .,
+  data = diagnostic_frame |> select(-contains("__")),
+  method = "class",
+  minsplit = 2,
+  minbucket = 10000
+)
+
+fancyRpartPlot(divergent_drivers, caption = NULL)
+
+test <- tidybayes::spread_draws(diagnostic_fit, density_hat[patch, year], theta[patch, year], sigma_obs)
+
+habitat <- tidybayes::spread_draws(diagnostic_fit, habitat[patch])
+
+habitat |>
+  ggplot(aes(habitat)) +
+  geom_histogram() +
+  facet_wrap(~patch, scales = "free")
 
 load(here("processed-data","stan_data_prep.Rdata"))
 
@@ -117,13 +219,56 @@ abund_p_y <-  dens %>%
     names_transform = list(year = as.integer)
   )
 
-test <- test |> 
-  mutate(predicted_abundance = density_hat * theta) |> 
+
+sbt_p_y <-  sbt %>%
+  as.data.frame() |>
+  mutate(patch = 1:np) |>
+  pivot_longer(
+    -patch,
+    names_to = "year",
+    values_to = "sbt",
+    names_prefix = "V",
+    names_transform = list(year = as.integer)
+  )
+
+abund_p_y <- abund_p_y |> 
+  left_join(sbt_p_y, by = c("year", "patch"))
+
+abund_p_y |> 
+  ggplot(aes(sbt, abundance)) + 
+  geom_point() + 
+  facet_wrap(~patch)
+
+
+abund_p_y |> 
+  ggplot(aes(year, abundance)) + 
+  geom_point() + 
+  facet_wrap(~patch)
+
+abund_p_y |> 
+  group_by(patch) |> 
+  summarise(any_not_zero = any(abundance > 0))
+
+abund_p_y |> 
+  ggplot(aes(year, abundance == 0)) + 
+  geom_point() + 
+  facet_wrap(~patch)
+
+abund_p_y |> 
+  group_by(year) |> 
+  summarise(abundance = sum(abundance)) |> 
+  ggplot(aes(year, abundance)) + 
+  geom_point() +
+  scale_y_continuous(limits = c(0, NA))
+
+
+together <- test |> 
+  mutate(predicted_abundance = density_hat / theta) |> 
   left_join(abund_p_y, by = c("patch", "year"))
 
 
-test |> 
-  ggplot(aes(abundance, predicted_abundance / 10)) + 
+together |> 
+  ggplot(aes((abundance), (predicted_abundance))) + 
   geom_point(alpha = 0.25) + 
   geom_abline(slope = 1, intercept = 0, color = "red") + 
   geom_smooth(method = "lm") + 
@@ -138,7 +283,7 @@ abundance_v_time <- abund_p_y_hat %>%
   ggplot(aes(year, density_hat)) +
   stat_lineribbon() +
   geom_point(data = abund_p_y, aes(year, abundance), color = "red") +
-  facet_wrap(~patch, scales = "free_y") +
+  facet_wrap(~patch) +
   labs(x="Year",y="Abundance", fill="Probability") +
   scale_fill_brewer()
 

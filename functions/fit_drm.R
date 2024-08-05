@@ -60,7 +60,8 @@ fit_drm <- function(amarel = FALSE,
                     pr_sel_delta_mu = 2,
                     pr_sel_delta_sigma = 4,
                     pr_theta_d_mu = 0.5,
-                    pr_theta_d_sigma = 0.5
+                    pr_theta_d_sigma = 0.5,
+                    patch_r0s = 0
 ) {
   if (amarel == TRUE) {
     dyn.load('/projects/community/gcc/9.2.0/gc563/lib64/libgfortran.so.5')
@@ -83,6 +84,7 @@ fit_drm <- function(amarel = FALSE,
     )
   }
   
+  area <- rep(1,np)
   # by default f is a time-varying instantaneous rate 
   # if we want to turn that off: 
   if (known_historic_f == 0) {
@@ -174,7 +176,9 @@ fit_drm <- function(amarel = FALSE,
     pr_sel_delta_mu = pr_sel_delta_mu,
     pr_sel_delta_sigma = pr_sel_delta_sigma,
     pr_theta_d_mu = pr_theta_d_mu,
-    pr_theta_d_sigma = pr_theta_d_sigma
+    pr_theta_d_sigma = pr_theta_d_sigma,
+  area = area,
+  patch_r0s = patch_r0s
   )
   nums <- 100 * exp(-.2 * (0:(n_ages - 1)))
   

@@ -824,7 +824,6 @@ generated quantities {
   array[np, ny_proj + 1] real density_proj;
   vector[ny_proj + 1] total_density_proj; 
   vector[ny_proj + 1] raw_proj;
-  array[ny_proj] matrix[np, n_lbins] proj_n_at_length_hat;
   vector[ny_proj + 1] centroid_proj;
   matrix[number_quantiles, ny_proj + 1] range_quantiles_proj;
   matrix[np, ny_proj + 1] theta_proj; // Bernoulli probability of encounter  
