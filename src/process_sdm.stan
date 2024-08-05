@@ -9,7 +9,7 @@ functions {
       
       // return normal_lpdf(sbt | Topt, width);
       return log((1 / sqrt(2 * pi() * width))
-      * exp(-pow(sbt - Topt, 2) / (2 * pow(width, 2))));
+      * exp(-square(sbt - Topt) / (2 * square(width))));
     }
   }
   
@@ -104,7 +104,7 @@ functions {
   real m, real d, real beta_t,
   int T_dep_recruitment,
   int spawner_recruit_relationship,
-  vector init_dep, real mean_recruits,
+  vector init_dep,
  // real beta_rec, 
   real sigma_r, vector raw,
   real r0, vector maturity_at_age,
@@ -115,7 +115,8 @@ functions {
   real beta_obs_int, real beta_obs,
   int number_quantiles,
   matrix init_n_at_age,
-  int use_init_n_at_age) {
+  int use_init_n_at_age,
+  vector capacity) {
     //// define variables ////
     
     matrix[np, ny_train] T_adjust; // tuning parameter for sbt suitability in each patch*year
@@ -239,25 +240,24 @@ functions {
         for (a in 1 : n_ages) {
           if (a == 1) {
             if (T_dep_recruitment == 1 && spawner_recruit_relationship == 0) {
-              n_at_age_hat[1, p, a] = init_dep[p] * mean_recruits // * beta_rec
-              * T_adjust[p, 1]
+              n_at_age_hat[1, p, a] = init_dep[p] * r0 * capacity[p] * T_adjust[p, 1]
               * exp(sigma_r * raw[1]
-              - pow(sigma_r, 2) / 2); // initialize age 0 with mean recruitment in every patch
+              - square(sigma_r) / 2); // initialize age 0 with mean recruitment in every patch
             }
             if (T_dep_recruitment == 0 && spawner_recruit_relationship == 0) {
-              n_at_age_hat[1, p, a] = init_dep[p] * mean_recruits
+              n_at_age_hat[1, p, a] = init_dep[p] * r0 * capacity[p]
               * exp(sigma_r * raw[1]
-              - pow(sigma_r, 2) / 2); // initialize age 0 with mean recruitment in every patch
+              - square(sigma_r) / 2); // initialize age 0 with mean recruitment in every patch
             }
             if (T_dep_recruitment == 0 && spawner_recruit_relationship == 1) {
-              n_at_age_hat[1, p, a] = init_dep[p] * r0
+              n_at_age_hat[1, p, a] = init_dep[p] * r0 * capacity[p]
               * exp(sigma_r * raw[1]
-              - pow(sigma_r, 2) / 2); // scale it down a bit -- historical fishing was still occurring
+              - square(sigma_r) / 2); // scale it down a bit -- historical fishing was still occurring
             }
             if (T_dep_recruitment == 1 && spawner_recruit_relationship == 1) {
-              n_at_age_hat[1, p, a] = init_dep[p] * r0
+              n_at_age_hat[1, p, a] = init_dep[p] * r0 * capacity[p]
               * exp(sigma_r * raw[1]
-              - pow(sigma_r, 2) / 2)
+              - square(sigma_r) / 2)
               * T_adjust[p, 1] //* beta_rec
               ;
             }
@@ -282,7 +282,7 @@ functions {
       } // close y==2 case  
       else {
         rec_dev[y - 1] = alpha * rec_dev[y - 2]
-        + sqrt(1 - pow(alpha, 2)) * sigma_r * raw[y];
+        + sqrt(1 - square(alpha)) * sigma_r * raw[y];
       } // close ifelse
       
       // describe population dynamics
@@ -290,32 +290,32 @@ functions {
         // density-independent, temperature-dependent recruitment of age 1
         
         if (T_dep_recruitment == 1 && spawner_recruit_relationship == 0) {
-          n_at_age_hat[y, p, 1] = mean_recruits
-          * exp(rec_dev[y - 1] - pow(sigma_r, 2) / 2)
+          n_at_age_hat[y, p, 1] = r0 * capacity[p]
+          * exp(rec_dev[y - 1] - square(sigma_r) / 2)
           * T_adjust[p, y - 1] //* beta_rec
           ;
         }
         if (T_dep_recruitment == 0 && spawner_recruit_relationship == 0) {
-          n_at_age_hat[y, p, 1] = mean_recruits
-          * exp(rec_dev[y - 1] - pow(sigma_r, 2) / 2);
+          n_at_age_hat[y, p, 1] = r0 * capacity[p]
+          * exp(rec_dev[y - 1] - square(sigma_r) / 2);
         }
         
         if (T_dep_recruitment == 0 && spawner_recruit_relationship == 1) {
-          n_at_age_hat[y, p, 1] = (0.8 * r0 * h * ssb[p, y - 1])
+          n_at_age_hat[y, p, 1] = ((0.8 * r0 * h * sum(ssb[1:np, y - 1]))
           / (0.2 * ssb0 * (1 - h)
-          + ssb[p, y - 1] * (h - 0.2));
+          + sum(ssb[1:np, y - 1]) * (h - 0.2))) * capacity[p];
           
           n_at_age_hat[y, p, 1] = n_at_age_hat[y, p, 1]
-          * exp(rec_dev[y - 1] - pow(sigma_r, 2) / 2);
+          * exp(rec_dev[y - 1] - square(sigma_r) / 2);
         }
         if (T_dep_recruitment == 1 && spawner_recruit_relationship == 1) {
-          n_at_age_hat[y, p, 1] = ((0.8 * r0 * h * ssb[p, y - 1])
+          n_at_age_hat[y, p, 1] = ((0.8 * r0 * h * sum(ssb[1:np, y - 1]))
           / (0.2 * ssb0 * (1 - h)
-          + ssb[p, y - 1] * (h - 0.2)))
-          * T_adjust[p, y - 1];
+          + sum(ssb[1:np, y - 1]) * (h - 0.2)))
+          * T_adjust[p, y - 1] * capacity[p];
           
           n_at_age_hat[y, p, 1] = n_at_age_hat[y, p, 1]
-          * exp(rec_dev[y - 1] - pow(sigma_r, 2) / 2);
+          * exp(rec_dev[y - 1] - square(sigma_r) / 2);
         }
         // 
         // why estimate raw and sigma_r? we want to estimate process error
@@ -324,7 +324,7 @@ functions {
         // sigma_r scales the amount of process error that we say is possible
         // letting it go to infinity means the model will always fit the data perfectly 
         // raw is the realized process error 
-        // exp(rec_dev[y-1] - pow(sigma_r,2)/2) = random variable with mean 0 and SD sigma_r
+        // exp(rec_dev[y-1] - square(sigma_r,2)/2) = random variable with mean 0 and SD sigma_r
         // allows us to have a different recruitment deviation every year even though sigma_r is constant 
       } // close recruitment by patch
       // pop dy for reproductive adults
@@ -408,6 +408,7 @@ functions {
 data {
   // survey data 
   
+  
   int n_ages; // number of ages
   
   int np; // number of patches
@@ -426,7 +427,7 @@ data {
   
   array[np, ny_train] real dens; // MEAN density of individuals of any age in each haul; used for rescaling the abundance to fit to our data
   
-  // vector[np] area; // mean area swept per patch 
+  vector[np] area; // mean area swept per patch 
   
   // environmental data 
   
@@ -502,8 +503,6 @@ data {
   real pr_sigma_r_raw_sigma;
   real pr_sigma_obs_mu; 
   real pr_sigma_obs_sigma; // formerly sigma_obs_cv
-  real pr_log_mean_recruits_mu; 
-  real pr_log_mean_recruits_sigma; 
   real pr_log_r0_mu; 
   real pr_log_r0_sigma; 
   real pr_Topt_mu; 
@@ -523,6 +522,7 @@ data {
   real pr_sel_delta_sigma; 
   real pr_theta_d_mu;
   real pr_theta_d_sigma; 
+  int<lower = 0, upper = 1> patch_r0s;
   
 }
 transformed data {
@@ -531,6 +531,9 @@ transformed data {
   matrix[np, np] adj_m; // adjacency matrix for patches 
   
   matrix[np, np] outer; // outer difference matrix 
+  
+  vector[np] parea = area / sum(area);
+  
   //int exp_yn; 
   
   // in R this is just outer(np, np, "-") 
@@ -559,17 +562,15 @@ transformed data {
 parameters {
   // real<lower = 1e-6> sigma_total;
   
-  real<lower=1e-6> sigma_obs;
+  real<lower=0, upper = 200> sigma_obs; // upper as a cap for edge cases where sigma_obs goes to inf
   
-  real<lower=1e-6> sigma_r_raw;
+  real<lower=0> sigma_r_raw;
   
   real<lower=0.5> width; // sensitivity to temperature variation
   
   real Topt; //  temp at which recruitment is maximized
   
   real<lower=0, upper=0.99> alpha; // autocorrelation term
-  
-  real log_mean_recruits; // log mean recruits per patch, changed to one value for all space/time
   
   vector[ny_train] raw; // array of raw recruitment deviates, changed to one value per year
   
@@ -581,9 +582,9 @@ parameters {
   
   // real<lower=0, upper=0.333> d; // dispersal fraction (0.333 = perfect admixture)
   
-  real<lower=0, upper=dcap> d; // increasing bounds on this for the temperature-dependent movement model 
+  real<lower=0, upper=dcap> d; // increasing bounds on this for the temperature-dependent movement model
   
-  vector<lower=0, upper=1>[np] init_dep;
+  vector<lower=1e-3, upper=1>[np] init_dep;
   
   real<lower=0, upper=2> theta_d;
   
@@ -594,11 +595,11 @@ parameters {
   real beta_obs_int; // intercept of detection probability
   
   real log_r0;
+  
+  simplex[np] habitat;
 }
 transformed parameters {
   real length_50_sel;
-  
-  real mean_recruits;
   
   matrix[np, ny_train] theta; // Bernoulli probability of encounter  
   
@@ -626,6 +627,8 @@ transformed parameters {
   
   vector[n_ages] d_at_age; // storage for diffusion at age
   
+  vector[np] capacity;
+  
   array[ny_train] matrix[np, n_ages] n_at_age_hat;
   
   matrix[np, n_ages] init_n_at_age;
@@ -636,12 +639,20 @@ transformed parameters {
   
   unfished = rep_vector(0, n_ages);
   
+  if (patch_r0s == 1){
+      capacity = habitat;
+
+  } else {
+    capacity = rep_vector(1.0 / np,np);
+  }
+  
   for (a in 1 : n_ages) {
     if (a >= age_at_maturity) {
       d_at_age[a] = d;
     }
   }
   
+
   r0 = exp(log_r0);
   
   sigma_r = sigma_r_raw * process_error_toggle;
@@ -659,25 +670,25 @@ transformed parameters {
   
   length_50_sel = loo * p_length_50_sel; // Dan made a note to change this sometime
   
+    // length_50_sel = loo * .01; // Dan made a note to change this sometime
+
+  
   selectivity_at_bin = 1.0
   ./ (1
   + exp(-log(19)
   * ((bin_mids - length_50_sel) / sel_delta))); // selectivity ogive at age
-  
-  mean_recruits = exp(log_mean_recruits);
   
   n_at_age_hat = simulate_population(np, ny_train, n_ages, n_lbins,
   age_at_maturity, sbt, Topt, width,
   exp_yn, T_dep_mortality, T_dep_movement,
   f, m, d, beta_t, T_dep_recruitment,
   spawner_recruit_relationship, init_dep,
-  mean_recruits,// beta_rec, 
   sigma_r, raw,
   r0, maturity_at_age, wt_at_age, alpha,
   h, ssb0, d_at_age, l_at_a_key,
   selectivity_at_bin, beta_obs_int,
   beta_obs, number_quantiles,
-  init_n_at_age, 0);
+  init_n_at_age, 0,capacity);
   
   for (y in 1 : ny_train) {
     for (p in 1 : np) {
@@ -691,9 +702,12 @@ transformed parameters {
       }
       
       if (use_poisson_link == 1){
-        // commenting out option with patch-varying area 
-       // theta[p, y] = 1 - exp(-area[p] * density_hat[p, y]);
-        theta[p, y] = 1 - exp(-density_hat[p, y]);
+        
+        // theta[p, y] = 1 - exp(-area[p] * density_hat[p, y]);
+        
+        theta[p, y] = 1 - exp(-density_hat[p, y]); // not multiplied by area since implicit in population size
+
+        
       } else {
         
         // if not using Poisson link, calculate encounter probability with lognormal dsitribution 
@@ -701,7 +715,7 @@ transformed parameters {
         theta[p, y] = 1
         / (1
         + exp(-(beta_obs_int
-        + beta_obs * log(density_hat[p, y] + 1e-6))));
+        + beta_obs * log(density_hat[p, y]))));
         
       }
     } // close patches
@@ -730,6 +744,8 @@ model {
   
   real test;
   
+  habitat ~ dirichlet(parea);
+  
   init_dep ~ beta(pr_init_dep_alpha, pr_init_dep_beta);
   
   beta_obs ~ normal(pr_beta_obs_mu, pr_beta_obs_sigma);
@@ -741,8 +757,6 @@ model {
   sigma_r_raw ~ normal(pr_sigma_r_raw_mu, pr_sigma_r_raw_sigma);
   
   sigma_obs ~ normal(pr_sigma_obs_mu, pr_sigma_obs_sigma);
-  
-  log_mean_recruits ~ normal(pr_log_mean_recruits_mu, pr_log_mean_recruits_sigma);
   
   log_r0 ~ normal(pr_log_r0_mu, pr_log_r0_sigma);
   
@@ -795,15 +809,21 @@ model {
         
         if (use_poisson_link == 1){
           
-          log(dens[p, y]) ~ normal(log((density_hat[p, y] + 1e-6)/ (theta[p,y] + 1e-6)) - pow(sigma_obs,2)/2, sigma_obs);
+          // if (theta[p,y] > 0 && density_hat[p,y] > 1e-6){
           
+          log(dens[p, y]) ~ normal(log(density_hat[p, y] / (theta[p,y] + 1e-6)) - square(sigma_obs)/2, sigma_obs);
+   
+          // }
         } else {
           
-          if (density_hat[p, y] > 0 && theta[p,y] > 0){
+          // print("d is ",density_hat[p, y]);
+          // 
+          // print("theta is ",theta[p, y]);
+          // 
+          // print("habitat is", capacity[p]);
+
+            log(dens[p, y]) ~ normal(log((density_hat[p, y] + 1e-6) / (theta[p,y] + 1e-6)) - square(sigma_obs)/2, sigma_obs);
             
-            log(dens[p, y]) ~ normal(log((density_hat[p, y] + 1e-6) / (theta[p,y] + 1e-6)) - pow(sigma_obs,2)/2, sigma_obs);
-            
-          }
         }
         
         1 ~ bernoulli(theta[p, y]);
@@ -824,6 +844,7 @@ generated quantities {
   array[np, ny_proj + 1] real density_proj;
   vector[ny_proj + 1] total_density_proj; 
   vector[ny_proj + 1] raw_proj;
+  // array[ny_proj] matrix[np, n_lbins] proj_n_at_length_hat;
   vector[ny_proj + 1] centroid_proj;
   matrix[number_quantiles, ny_proj + 1] range_quantiles_proj;
   matrix[np, ny_proj + 1] theta_proj; // Bernoulli probability of encounter  
@@ -840,7 +861,7 @@ generated quantities {
         if (theta[p,y] > 0){
           
           dens_pp[p, y] = bernoulli_rng(theta[p, y])
-          * exp(normal_rng(log(density_hat[p, y] / theta[p,y] + 1e-3) - pow(sigma_obs,2)/2,
+          * exp(normal_rng(log(density_hat[p, y] / theta[p,y]) - square(sigma_obs)/2,
           sigma_obs));
         } else {
           dens_pp[p, y] = 0;
@@ -848,7 +869,7 @@ generated quantities {
       } else {
         
         dens_pp[p, y] = bernoulli_rng(theta[p, y])
-        * exp(normal_rng(log(density_hat[p, y] + 1e-6),
+        * exp(normal_rng(log(density_hat[p, y] / theta_proj[p, y]) - square(sigma_obs) / 2,
         sigma_obs));
       }
       
@@ -866,13 +887,13 @@ generated quantities {
     T_dep_movement, f_proj, m, d, beta_t,
     T_dep_recruitment,
     spawner_recruit_relationship,
-    init_dep, mean_recruits,// beta_rec,
+    init_dep,// beta_rec,
     sigma_r, raw_proj, r0,
     maturity_at_age, wt_at_age, alpha, h,
     ssb0, d_at_age, l_at_a_key,
     selectivity_at_bin, beta_obs_int,
     beta_obs, number_quantiles,
-    n_at_age_hat[ny_train,  : ,  : ], 1);
+    n_at_age_hat[ny_train,  : ,  : ], 1,capacity);
     
     for (y in 1 : (ny_proj + 1)) {
       
@@ -891,19 +912,20 @@ generated quantities {
         
       if (use_poisson_link == 1){
         
-        theta_proj[p, y] = 1 - exp(-density_proj[p, y]);
+        // theta_proj[p, y] = 1 - exp(-area[p] * density_proj[p, y]);
         
+        theta_proj[p, y] = 1 - exp(-density_proj[p, y]);
+
       } else {
         theta_proj[p, y] = 1
         / (1
         + exp(-(beta_obs_int
         + beta_obs
-        * log(density_proj[p, y] + 1e-6))));
+        * log(density_proj[p, y]))));
       }
         
         density_obs_proj[p, y] = bernoulli_rng(theta_proj[p, y])
-        * exp(normal_rng(log((density_proj[p, y] + 1e-6) / theta_proj[p, y]
-        ),
+        * exp(normal_rng(log((density_proj[p, y] / theta_proj[p, y])) - square(sigma_obs) / 2,
         sigma_obs));
         // the observed densitieis as opposed to the true densities
       } // close patches 

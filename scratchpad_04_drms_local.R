@@ -39,7 +39,7 @@ ctrl_file <- read_csv("control_file.csv") %>%
   # slice(1)
 
 fit_drms <- TRUE
-use_poisson_link <- FALSE
+use_poisson_link <- TRUE
 if (use_poisson_link){
   run_name <- "yes-pois"
 } else {
@@ -90,7 +90,8 @@ for(k in 1:nrow(ctrl_file)){
       adapt_delta = 0.85, 
       run_forecast = 1,
       quantiles_calc = quantiles_calc,
-      drm_name = "process_sdm_v2"
+      drm_name = "process_sdm_v2",
+      patch_r0s = 1
     )
     ) 
     )# as currently written this just adds a column to drm_fits that says "all done". the column `fits` used to contain the model object itself 
