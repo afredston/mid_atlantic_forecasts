@@ -204,6 +204,7 @@ fit_drm <- function(amarel = FALSE,
     adapt_delta = 0.85,
     init = lapply(1:chains, function(x)
       list(
+        sigma_obs = 0.1,
         Topt = jitter(12, 4),
         log_r0 = jitter(10, 5),
         beta_obs = jitter(1e-6, 4),

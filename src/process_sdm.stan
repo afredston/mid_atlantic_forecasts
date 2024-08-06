@@ -562,9 +562,9 @@ transformed data {
 parameters {
   // real<lower = 1e-6> sigma_total;
   
-  real<lower=0, upper = 200> sigma_obs; // upper as a cap for edge cases where sigma_obs goes to inf
+  real<lower=1e-6, upper = 200> sigma_obs; // upper as a cap for edge cases where sigma_obs goes to inf
   
-  real<lower=0> sigma_r_raw;
+  real<lower=1e-6> sigma_r_raw;
   
   real<lower=0.5> width; // sensitivity to temperature variation
   
@@ -861,7 +861,7 @@ generated quantities {
         if (theta[p,y] > 0){
           
           dens_pp[p, y] = bernoulli_rng(theta[p, y])
-          * exp(normal_rng(log(density_hat[p, y] / theta[p,y]) - square(sigma_obs)/2,
+          * exp(normal_rng(log(density_hat[p, y]) - square(sigma_obs)/2,
           sigma_obs));
         } else {
           dens_pp[p, y] = 0;
@@ -869,7 +869,7 @@ generated quantities {
       } else {
         
         dens_pp[p, y] = bernoulli_rng(theta[p, y])
-        * exp(normal_rng(log(density_hat[p, y] / theta_proj[p, y]) - square(sigma_obs) / 2,
+        * exp(normal_rng(log(density_hat[p, y]) - square(sigma_obs) / 2,
         sigma_obs));
       }
       

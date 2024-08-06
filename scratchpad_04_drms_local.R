@@ -26,20 +26,21 @@ sapply(funs, function(x)
 quantiles_calc <- c(0.05, 0.5, 0.95)
 quantiles_calc <- c(0.95, 0.95, 0.95)
 
+# filter(id == "v0.64")
+
 ctrl_file <- read_csv("control_file.csv") %>%
-  filter(id == "v0.64")
-  # filter(
-  #   eval_l_comps == 0,
-  #   spawner_recruit_relationship == 1,
-  #   process_error_toggle == 0,
-  #   known_f == 0,
-  #   T_dep_mortality == 0
-  # ) |>
+  filter(
+    eval_l_comps == 0,
+    spawner_recruit_relationship == 1,
+    process_error_toggle == 1,
+    known_f == 1,
+    T_dep_mortality == 1
+  ) 
   # ungroup() |>
   # slice(1)
 
 fit_drms <- TRUE
-use_poisson_link <- TRUE
+use_poisson_link <- FALSE
 if (use_poisson_link){
   run_name <- "yes-pois"
 } else {
@@ -207,6 +208,47 @@ habitat |>
 
 load(here("processed-data","stan_data_prep.Rdata"))
 
+
+
+# composition data
+
+length_comps <- reshape2::melt(len) |>
+  rename(
+    patch = Var1,
+    length_bin = Var2,
+    year = Var3,
+    count = value
+  ) |>
+  as_tibble() |>
+  group_by(year, patch) |>
+  mutate(pcount = count / sum(count))  |>
+  mutate(pcount = replace_na(pcount, 0)) |> 
+  ungroup()
+
+length_comps |> 
+  filter(year == max(year)) |> 
+  ggplot(aes(length_bin, pcount)) +
+  geom_point() +
+  facet_wrap(~patch)
+
+
+tmp <- tidybayes::spread_draws(diagnostic_fit, n_at_length_hat[year, patch, length_bin], ndraws = 200)
+
+  
+estimated_length_comps <- tmp |>
+  group_by(patch, year, .chain, .draw) |>
+  mutate(pcount_hat = n_at_length_hat / sum(n_at_length_hat))
+
+estimated_length_comps |> 
+  filter(year == max(year)) |> 
+  ggplot(aes(length_bin, pcount_hat)) + 
+  stat_lineribbon(alpha = 0.25) +
+  geom_point(data = length_comps |> filter(year == max(year)), aes(length_bin, pcount)) +
+  facet_wrap(~patch , scales = "free_y") + 
+  scale_fill_brewer()
+
+
+# abundance trends --------------------------------------------------------
 
 abund_p_y <-  dens %>%
   as.data.frame() |>
