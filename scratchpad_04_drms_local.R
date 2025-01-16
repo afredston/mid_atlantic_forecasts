@@ -26,16 +26,17 @@ sapply(funs, function(x)
 quantiles_calc <- c(0.05, 0.5, 0.95)
 quantiles_calc <- c(0.95, 0.95, 0.95)
 
-# filter(id == "v0.64")
 
 ctrl_file <- read_csv("control_file.csv") %>%
-  filter(
-    eval_l_comps == 0,
-    spawner_recruit_relationship == 1,
-    process_error_toggle == 1,
-    known_f == 1,
-    T_dep_mortality == 1
-  ) 
+  filter(id == "v0.64")
+  
+  # filter(
+  #   eval_l_comps == 0,
+  #   spawner_recruit_relationship == 1,
+  #   process_error_toggle == 1,
+  #   known_f == 1,
+  #   T_dep_mortality == 1
+  # ) 
   # ungroup() |>
   # slice(1)
 
@@ -111,8 +112,6 @@ posterior_drm <- posterior::as_draws_array(diagnostic_fit)
 
 nuts_diagnostics <- bayesplot::nuts_params(diagnostic_fit)
 
-diagnostic_fit$metadata()$model_params
-
 # mcmc_parcoord(
 #   posterior_drm,
 #   pars = vars(
@@ -138,7 +137,7 @@ diagnostics <- diagnostic_fit$sampler_diagnostics(format = "df")
 
 diagnostics
 
-
+mcmc_hist(diagnostic_fit$draws("d"))
 
 test <- tidybayes::spread_draws(
   diagnostic_fit,

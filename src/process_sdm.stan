@@ -861,7 +861,7 @@ generated quantities {
         if (theta[p,y] > 0){
           
           dens_pp[p, y] = bernoulli_rng(theta[p, y])
-          * exp(normal_rng(log(density_hat[p, y]) - square(sigma_obs)/2,
+          * exp(normal_rng(log(density_hat[p, y] / (theta[p,y] + 1e-6)) - square(sigma_obs)/2,
           sigma_obs));
         } else {
           dens_pp[p, y] = 0;
@@ -869,7 +869,7 @@ generated quantities {
       } else {
         
         dens_pp[p, y] = bernoulli_rng(theta[p, y])
-        * exp(normal_rng(log(density_hat[p, y]) - square(sigma_obs) / 2,
+        * exp(normal_rng(log(density_hat[p, y] / (theta[p,y] + 1e-6)) - square(sigma_obs) / 2,
         sigma_obs));
       }
       
