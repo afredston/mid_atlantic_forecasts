@@ -130,7 +130,7 @@ functions {
   matrix sbt, real Topt, real width,
   real exp_yn, int T_dep_mortality,
   int T_dep_movement, matrix f_a_y,
-  real m, real d, real beta_t,
+  real m, real m_e, real d, real beta_t,
   int T_dep_recruitment,
   int spawner_recruit_relationship,
   vector init_dep, real mean_recruits,
@@ -209,9 +209,10 @@ functions {
       for (a in 1 : n_ages) {
         for (y in 1 : ny_train) {
           if (T_dep_mortality == 1) {
-            surv[p, a, y] = exp(-((f_a_y[a, y] + m))) * T_adjust[p, y]; // adjust survival down when off of topt
+            // m_e is the excess of mortality
+            surv[p, a, y] = exp(-((f_a_y[a, y] + m +
+                                   m_e * (1 - T_adjust[p, y])))) ; // adjust survival down when off of topt
           }
-          
           if (T_dep_mortality == 0) {
             surv[p, a, y] = exp(-(f_a_y[a, y] + m));
           }
@@ -536,7 +537,8 @@ data {
   real pr_sel_delta_sigma; 
   real pr_theta_d_mu;
   real pr_theta_d_sigma; 
-  
+  real<lower = 0> pr_est_m_sigma; // prior standard dev of `est_m` (estimated natural mortality)
+  real<lower = 0, upper = 1> pr_m_e_pg1; // prior probability that `m_e` > 1
 }
 transformed data {
   vector[n_ages] maturity_at_age; // vector of probabilities of being mature at each age, currently binary (0/1) and taken as known
@@ -612,6 +614,11 @@ parameters {
   real beta_obs_int; // intercept of detection probability
   
   real log_r0;
+
+  array[T_dep_mortality] real<lower = 0, 0.25> est_m; // used in place of `m`
+                                                      // when T_dep_mortality is
+                                                      // on
+  array[T_dep_mortality] real<lower = 0> m_e; // excess of mortality due temperature
 }
 transformed parameters {
   real length_50_sel;
@@ -706,7 +713,10 @@ transformed parameters {
     n_at_age_hat = simulate_population(np, ny_train, n_ages, n_lbins,
     age_at_maturity, sbt, Topt, width,
     exp_yn, T_dep_mortality, T_dep_movement,
-    f, m, d, beta_t, T_dep_recruitment,
+    f,
+    T_dep_mortality ? est_m : m,
+    T_dep_mortality ? m_e : 0.0,
+    d, beta_t, T_dep_recruitment,
     spawner_recruit_relationship, init_dep,
     mean_recruits,// beta_rec, 
     sigma_r[1], rec_dev,
@@ -778,6 +788,13 @@ model {
     - 1 * normal_lccdf(sigma_r[1] | pr_sigma_r_raw_mu, pr_sigma_r_raw_sigma);
     target += normal_lpdf(raw | pr_raw_mu, pr_raw_sigma);
     target += beta_lpdf(alpha | pr_alpha_alpha, pr_alpha_beta); 
+  }
+
+  if (T_dep_mortality) {
+    real m_e_lambda; // parameter of exponential dist.
+    m_e_lambda = - log(pr_m_e_pg1);
+    target += normal_lpdf(est_m[1] | m, pr_est_m_sigma);
+    target += exponential_lpdf(m_e[1] | m_e_lambda);
   }
   
   sigma_obs ~ normal(pr_sigma_obs_mu, pr_sigma_obs_sigma);
