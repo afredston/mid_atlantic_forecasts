@@ -394,7 +394,8 @@ drm_summary <- drm_out %>%
 dat_forecasts <- drm_summary %>% 
   left_join(ctrl_file %>% select(name)) %>% 
   bind_rows(gam_summary, persistence_summary)%>% 
-  filter(feature %in% c('centroid','cold_edge','warm_edge')) 
+  filter(feature %in% c('centroid','cold_edge','warm_edge'))  # remove density
+write_csv(dat_forecasts, file=here("processed-data","model_performance_by_year.csv"))
 
 # pool across years to calculate bias and RMSE
 dat_forecasts_summ <- dat_forecasts %>% 

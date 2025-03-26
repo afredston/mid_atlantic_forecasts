@@ -28,6 +28,9 @@ dat_catchonly <- read_csv(here("processed-data","flounder_catch_fall_training.cs
 dat_test_catchonly <- read_csv(here("processed-data","flounder_catch_fall_testing.csv"))
 convergence_checks <- read_csv(file=here("results","convergence_checks.csv"))
 ctrl_file <- read_csv(file=here("ctrl_file_used.csv"))
+dat_mod_by_yr <- read_csv(file=here("processed-data","model_performance_by_year.csv")) |> 
+  mutate(feature = case_match(feature, "centroid" ~ "Centroid", "warm_edge" ~ "Warm Edge", "cold_edge" ~ "Cold Edge", .default=feature),
+         type = ifelse(str_detect(name, "DRM"),"DRM", name))
 load(here("processed-data","stan_data_prep.Rdata"))
 
 # drm_outputs_available_locally <- TRUE
@@ -43,6 +46,77 @@ knitr::opts_chunk$set(
 #knitr::opts_knit$set(eval.after = "fig.cap")
 ```
 
+```{r tbl-pars-stan}
+param_table_df <- data.frame(
+  Description = c(
+    "Recorded density",
+    "SD of density at the log-scale",
+    "Natural mortality rate",
+    "Fishing mortality rate",
+    "Intercept for detection probability",
+    "Coefficient linking detection probability to density",
+    "Overall average recruitment",
+    "Conditional variance in the AR(1) process",
+    "White noise used in the AR(1) process",
+    "Autcorrelation from AR(1) term",
+    "Excess in natural mortality due to temperature",
+    "Isotropic dispersal rate",
+    "Sea bottom temperature",
+    "How much tax per unit of temperature",
+    "Suitability index",
+    "Temperature optimizing $I_{p, t}$",
+    "Width parameter from $I_{p, t}$"
+  ),
+  Paper = c(
+    "$D_{p, t}$",
+    "$\\sigma_{\\mathrm{obs}}$",
+    "$m$",
+    "$f_{a, t}$",
+    "$\\beta_0$",
+    "$\\beta_1$",
+    "$\\mu$",
+    "$\\sigma_{\\mathrm{proc}}$",
+    "$z_t$",
+    "$\\alpha$",
+    "$\\gamma$",
+    "$\\delta$",
+    "$T_{p, t}$",
+    "$\\beta_{tax}$",
+    "$I_{p, t}$",
+    "$\\tau$",
+    "$\\omega$"
+  ),
+  Code = c(
+    "$dens$",
+    "$sigma_obs$",
+    "$m$",
+    "$f$",
+    "$beta_obs_int$",
+    "$beta_obs$",
+    "$mean_recruits$",
+    "$sigma_r$",
+    "$raw$",
+    "$alpha$",
+    "$m_e$",
+    "$d$",
+    "$sbt$",
+    "$beta_t$",
+    "$T_adjust$",
+    "$Topt$",
+    "$width$"
+  ),
+  stringsAsFactors = FALSE
+)
+
+kbl(param_table_df,
+    escape = FALSE,
+    align = "lcc",
+    booktabs = TRUE,
+    caption = "Correspondence between parameters named in the manuscript and variables in the associated code (publicly available on GitHub).") |>
+  kable_styling(font_size = 8,
+                latex_options = c("striped"),
+                full_width = TRUE)
+```
 
 ```{r priors}
 boop <- rbind(
@@ -234,7 +308,7 @@ for(i in ctrl_file$id){
 fixed_param_dat %>% 
   ggplot(aes(x=value, y=name)) +
   geom_density_ridges() + 
-  facet_wrap(~param, ncol=3, scales="free") +
+  facet_wrap(~param, ncol=1, scales="free") +
   labs(x=element_blank(), y="Model") +
   theme_bw() 
 
@@ -252,3 +326,20 @@ fixed_param_dat %>%
 # quantile(extract(stan_model_fit, "Topt")$Topt)
 
 ```
+
+```{r resid-by-yr, fig.cap="Residuals (estimated minus actual values) of range metrics each year over the ten-year testing period for the focal models in the main text: DRM with no temperature effect (DRM null) or a temperature effect on recruitment, mortality, or movement; a GAM SDM; and a persistence forecast. The horizontal dashed line indicates zero residuals, i.e., the estimate perfectly matches the testing data."}
+dat_mod_by_yr |>  
+  mutate(name = factor(name, levels=c('DRM null','DRM T-recruit','DRM T-mortality','DRM T-movement','GAM','Persistence')),
+         feature = factor(feature, levels=c('Cold Edge','Centroid','Warm Edge'))) |> 
+  ggplot(aes(x=year, y=resid)) +
+    geom_hline(aes(yintercept=0), color="darkgrey", linetype="dashed") +
+geom_point() +
+  geom_line() +
+  facet_grid(feature ~ name) +
+  scale_x_continuous(breaks=seq(2008, 2016, 2)) +
+  labs(x="Year", y = "Residuals") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90),
+       strip.text.x = element_text(size = 7))
+```
+
