@@ -56,9 +56,9 @@ param_table_df <- data.frame(
     "Intercept for detection probability",
     "Coefficient linking detection probability to density",
     "Overall average recruitment",
-    "Conditional variance in the AR(1) process",
-    "White noise used in the AR(1) process",
-    "Autcorrelation from AR(1) term",
+    "Conditional variance in the AR1 process",
+    "White noise used in the AR1 process",
+    "Autcorrelation from AR1 term",
     "Excess in natural mortality due to temperature",
     "Isotropic dispersal rate",
     "Sea bottom temperature",
@@ -69,13 +69,13 @@ param_table_df <- data.frame(
   ),
   Paper = c(
     "$D_{p, t}$",
-    "$\\sigma_{\\mathrm{obs}}$",
+    "$\\sigma_{obs}$",
     "$m$",
     "$f_{a, t}$",
     "$\\beta_0$",
     "$\\beta_1$",
     "$\\mu$",
-    "$\\sigma_{\\mathrm{proc}}$",
+    "$\\sigma_{proc}$",
     "$z_t$",
     "$\\alpha$",
     "$\\gamma$",
@@ -107,6 +107,8 @@ param_table_df <- data.frame(
   ),
   stringsAsFactors = FALSE
 )
+
+param_table_df$Code <- gsub("_","\\\\_",param_table_df$Code)
 
 kbl(param_table_df,
     escape = FALSE,
