@@ -29,4 +29,4 @@ To run models for summer flounder, follow these steps:
 1. Run `06_model_evaluation.R` to iterate over converged models, create alternative models (SDMs, persistence forecast), and quantify model skill.
 1. Run `07_thin_posteriors.R` to thin the Stan outputs and make them tractable files. (You can skip this; the outputs of it are on GitHub, so you can still examine the thinned posteriors without running any Stan code or having the full posterior files, which are large.) 
 1. Run `08_paper_stats_and_figures.R` to generate the figures and in-text statistics in the manuscript.
-1. Run `00_supplement.Rmd` to generate the supplementary materials for the paper.
+1. Run `09_supplement.Rmd` to generate the supplementary materials for the paper.

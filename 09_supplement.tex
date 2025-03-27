@@ -1,0 +1,257 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+  portrait]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{5}
+\renewcommand{\figurename}{Supplementary Figure }
+\renewcommand{\tablename}{Supplementary Table}
+\makeatletter
+\def\fnum@figure{\figurename\thefigure}
+\makeatother
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{wrapfig}
+\usepackage{float}
+\usepackage{colortbl}
+\usepackage{pdflscape}
+\usepackage{tabu}
+\usepackage{threeparttable}
+\usepackage{threeparttablex}
+\usepackage[normalem]{ulem}
+\usepackage{makecell}
+\usepackage{xcolor}
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\author{}
+\date{\vspace{-2.5em}}
+
+\begin{document}
+
+\begin{table}
+\centering
+\caption{\label{tab:tbl-pars-stan}Correspondence between parameters named in the manuscript and variables in the associated code (publicly available on GitHub).}
+\centering
+\fontsize{8}{10}\selectfont
+\begin{tabu} to \linewidth {>{\raggedright}X>{\centering}X>{\centering}X}
+\toprule
+Description & Paper & Code\\
+\midrule
+\cellcolor{gray!10}{Recorded density} & \cellcolor{gray!10}{$D_{p, t}$} & \cellcolor{gray!10}{dens}\\
+SD of density at the log-scale & $\sigma_{\mathrm{obs}}$ & sigma_obs\\
+\cellcolor{gray!10}{Natural mortality rate} & \cellcolor{gray!10}{$m$} & \cellcolor{gray!10}{m}\\
+Fishing mortality rate & $f_{a, t}$ & f\\
+\cellcolor{gray!10}{Intercept for detection probability} & \cellcolor{gray!10}{$\beta_0$} & \cellcolor{gray!10}{beta_obs_int}\\
+\addlinespace
+Coefficient linking detection probability to density & $\beta_1$ & beta_obs\\
+\cellcolor{gray!10}{Overall average recruitment} & \cellcolor{gray!10}{$\mu$} & \cellcolor{gray!10}{mean_recruits}\\
+Conditional variance in the AR(1) process & $\sigma_{\mathrm{proc}}$ & sigma_r\\
+\cellcolor{gray!10}{White noise used in the AR(1) process} & \cellcolor{gray!10}{$z_t$} & \cellcolor{gray!10}{raw}\\
+Autcorrelation from AR(1) term & $\alpha$ & alpha\\
+\addlinespace
+\cellcolor{gray!10}{Excess in natural mortality due to temperature} & \cellcolor{gray!10}{$\gamma$} & \cellcolor{gray!10}{m_e}\\
+Isotropic dispersal rate & $\delta$ & d\\
+\cellcolor{gray!10}{Sea bottom temperature} & \cellcolor{gray!10}{$T_{p, t}$} & \cellcolor{gray!10}{sbt}\\
+How much tax per unit of temperature & $\beta_{tax}$ & beta_t\\
+\cellcolor{gray!10}{Suitability index} & \cellcolor{gray!10}{$I_{p, t}$} & \cellcolor{gray!10}{T_adjust}\\
+\addlinespace
+Temperature optimizing $I_{p, t}$ & $\tau$ & Topt\\
+\cellcolor{gray!10}{Width parameter from $I_{p, t}$} & \cellcolor{gray!10}{$\omega$} & \cellcolor{gray!10}{width}\\
+\bottomrule
+\end{tabu}
+\end{table}
+
+\begin{table}
+\centering
+\caption{\label{tab:priors}Hyperparameters used in the DRM.}
+\centering
+\fontsize{8}{10}\selectfont
+\begin{tabu} to \linewidth {>{\raggedright}X>{\raggedright}X}
+\toprule
+Parameter & Prior.Distribution\\
+\midrule
+\cellcolor{gray!10}{$\beta_{obs,1}$} & \cellcolor{gray!10}{Normal $\sim (0.001, 0.1)$}\\
+$\beta_{obs,0}$ & Normal $\sim (-100, 4)$\\
+\cellcolor{gray!10}{$z$} & \cellcolor{gray!10}{Normal $\sim (0, 1)$}\\
+$\sigma_{proc}$ & Normal $\sim (0.2, 0.1)$\\
+\cellcolor{gray!10}{$\sigma_{obs}$} & \cellcolor{gray!10}{Normal $\sim (0.21, 0.2)$}\\
+\addlinespace
+$width$ & Normal $\sim (4, 2)$\\
+\cellcolor{gray!10}{$T_{opt}$} & \cellcolor{gray!10}{Normal $\sim (18, 2)$}\\
+$d$ & Normal $\sim (0.01, 0.1)$\\
+\cellcolor{gray!10}{$\beta_{tax}$} & \cellcolor{gray!10}{Normal $\sim (0, 2)$}\\
+$\alpha$ & Beta $\sim (12, 20)$\\
+\addlinespace
+\cellcolor{gray!10}{$\mu_r$} & \cellcolor{gray!10}{Lognormal $\sim (7, 5)$}\\
+$m_e$ & Exponential $\sim 2.3$\\
+\bottomrule
+\end{tabu}
+\end{table}
+
+\begin{table}
+\centering
+\caption{\label{tab:btemp-train}Linear regressions of sea bottom temperature (measured in the trawl surveys) on year within each patch during the model training interval (1972-2006). Values are rounded to three digits.}
+\centering
+\fontsize{8}{10}\selectfont
+\begin{tabu} to \linewidth {>{\raggedleft}X>{\raggedleft}X>{\raggedleft}X>{\raggedleft}X}
+\toprule
+Patch & Estimate & Standard Error & P-value\\
+\midrule
+\cellcolor{gray!10}{35} & \cellcolor{gray!10}{0.002} & \cellcolor{gray!10}{0.040} & \cellcolor{gray!10}{0.956}\\
+36 & 0.045 & 0.023 & 0.049\\
+\cellcolor{gray!10}{37} & \cellcolor{gray!10}{0.056} & \cellcolor{gray!10}{0.022} & \cellcolor{gray!10}{0.012}\\
+38 & 0.030 & 0.017 & 0.089\\
+\cellcolor{gray!10}{39} & \cellcolor{gray!10}{0.047} & \cellcolor{gray!10}{0.013} & \cellcolor{gray!10}{0.000}\\
+\addlinespace
+40 & 0.019 & 0.006 & 0.001\\
+\cellcolor{gray!10}{41} & \cellcolor{gray!10}{0.027} & \cellcolor{gray!10}{0.008} & \cellcolor{gray!10}{0.001}\\
+42 & -0.003 & 0.004 & 0.493\\
+\cellcolor{gray!10}{43} & \cellcolor{gray!10}{0.003} & \cellcolor{gray!10}{0.005} & \cellcolor{gray!10}{0.479}\\
+44 & 0.006 & 0.010 & 0.546\\
+\bottomrule
+\end{tabu}
+\end{table}
+
+\begin{table}
+\centering
+\caption{\label{tab:btemp-test}Linear regressions of sea bottom temperature (measured in the trawl surveys) on year within each patch during the model testing interval (2007-2016). Values are rounded to three digits.}
+\centering
+\fontsize{8}{10}\selectfont
+\begin{tabu} to \linewidth {>{\raggedleft}X>{\raggedleft}X>{\raggedleft}X>{\raggedleft}X}
+\toprule
+Patch & Estimate & Standard Error & P-value\\
+\midrule
+\cellcolor{gray!10}{35} & \cellcolor{gray!10}{0.159} & \cellcolor{gray!10}{0.235} & \cellcolor{gray!10}{0.500}\\
+36 & 0.226 & 0.176 & 0.202\\
+\cellcolor{gray!10}{37} & \cellcolor{gray!10}{0.161} & \cellcolor{gray!10}{0.153} & \cellcolor{gray!10}{0.295}\\
+38 & -0.042 & 0.111 & 0.708\\
+\cellcolor{gray!10}{39} & \cellcolor{gray!10}{0.089} & \cellcolor{gray!10}{0.090} & \cellcolor{gray!10}{0.321}\\
+\addlinespace
+40 & 0.360 & 0.044 & 0.000\\
+\cellcolor{gray!10}{41} & \cellcolor{gray!10}{0.158} & \cellcolor{gray!10}{0.059} & \cellcolor{gray!10}{0.007}\\
+42 & 0.168 & 0.029 & 0.000\\
+\cellcolor{gray!10}{43} & \cellcolor{gray!10}{0.174} & \cellcolor{gray!10}{0.035} & \cellcolor{gray!10}{0.000}\\
+44 & 0.253 & 0.045 & 0.000\\
+\bottomrule
+\end{tabu}
+\end{table}
+
+\begin{figure}
+\centering
+\includegraphics{09_supplement_files/figure-latex/frequency-distribution-1.pdf}
+\caption{\label{fig:frequency-distribution}Frequency distribution of summer flounder abundance in all hauls used in the analysis (testing and training data combined; \emph{n} = 12,203).}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics{09_supplement_files/figure-latex/haul-distribution-1.pdf}
+\caption{\label{fig:haul-distribution}Number of hauls per year; \emph{n} = 12,203.}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics{09_supplement_files/figure-latex/null-DRM-by-patch-1.pdf}
+\caption{\label{fig:null-DRM-by-patch}Median density estimated by the null DRM in the training dataset by patch and year (black line). Blue shading represents the 50\%, 80\%, and 95\% credible intervals. Red points are the observed data. Note that y-axes vary by patch.}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics{09_supplement_files/figure-latex/T-recruit-DRM-by-patch-1.pdf}
+\caption{\label{fig:T-recruit-DRM-by-patch}Median density estimated by the temperature-dependent recruitment DRM in the training dataset by patch and year (black line). Blue shading represents the 50\%, 80\%, and 95\% credible intervals. Red points are the observed data. Note that y-axes vary by patch.}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics{09_supplement_files/figure-latex/T-mortality-DRM-by-patch-1.pdf}
+\caption{\label{fig:T-mortality-DRM-by-patch}Median density estimated by the temperature-dependent mortality DRM in the training dataset by patch and year (black line). Blue shading represents the 50\%, 80\%, and 95\% credible intervals. Red points are the observed data. Note that y-axes vary by patch.}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics{09_supplement_files/figure-latex/T-movement-DRM-by-patch-1.pdf}
+\caption{\label{fig:T-movement-DRM-by-patch}Median density estimated by the temperature-dependent movement DRM in the training dataset by patch and year (black line). Blue shading represents the 50\%, 80\%, and 95\% credible intervals. Red points are the observed data. Note that y-axes vary by patch.}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics{09_supplement_files/figure-latex/posterior-plot-1.pdf}
+\caption{\label{fig:posterior-plot}Posterior distributions of parameters from the four fitted DRMs. These parameters are d, the annual dispersal fraction between adjacent patches; mean\_recruits, the average density of recruits per patch; sigma\_obs, the standard deviation of density at the log scale; Topt, the optimal temperature estimated for whichever process (movement or recruitment or mortality) was estimated as temperature-dependent, in °C; and width, a parameter controlling how sensitive the modeled process was to temperature. See Supp. Tab. 1 for correspondence of code variables to model parameters in the manuscript.}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics{09_supplement_files/figure-latex/resid-by-yr-1.pdf}
+\caption{\label{fig:resid-by-yr}Residuals (estimated minus actual values) of range metrics each year over the ten-year testing period for the focal models in the main text: DRM with no temperature effect (DRM null) or a temperature effect on recruitment, mortality, or movement; a GAM SDM; and a persistence forecast. The horizontal dashed line indicates zero residuals, i.e., the estimate perfectly matches the testing data.}
+\end{figure}
+
+\end{document}

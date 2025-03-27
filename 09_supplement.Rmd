@@ -87,23 +87,23 @@ param_table_df <- data.frame(
     "$\\omega$"
   ),
   Code = c(
-    "$dens$",
-    "$sigma_obs$",
-    "$m$",
-    "$f$",
-    "$beta_obs_int$",
-    "$beta_obs$",
-    "$mean_recruits$",
-    "$sigma_r$",
-    "$raw$",
-    "$alpha$",
-    "$m_e$",
-    "$d$",
-    "$sbt$",
-    "$beta_t$",
-    "$T_adjust$",
-    "$Topt$",
-    "$width$"
+    "dens",
+    "sigma_obs",
+    "m",
+    "f",
+    "beta_obs_int",
+    "beta_obs",
+    "mean_recruits",
+    "sigma_r",
+    "raw",
+    "alpha",
+    "m_e",
+    "d",
+    "sbt",
+    "beta_t",
+    "T_adjust",
+    "Topt",
+    "width"
   ),
   stringsAsFactors = FALSE
 )
@@ -295,20 +295,28 @@ plot_out <- density_hat_thin %>%
 print(plot_out)
 ```
 
-```{r posterior-plot, fig.cap="Posterior distributions of three important parameters from the four fitted DRMs. These parameters are *d*, the annual dispersal rate between adjacent patches; *Topt*, the optimal temperature estimated for whichever process (movement or recruitment or mortality) was estimated as temperature-dependent; and *width*, a parameter controlling how sensitive the modeled process was to temperature."}
+```{r posterior-plot, fig.cap="Posterior distributions of parameters from the four fitted DRMs. These parameters are d, the annual dispersal fraction between adjacent patches; mean_recruits, the average density of recruits per patch; sigma_obs, the standard deviation of density at the log scale; Topt, the optimal temperature estimated for whichever process (movement or recruitment or mortality) was estimated as temperature-dependent, in °C; and width, a parameter controlling how sensitive the modeled process was to temperature. See Supp. Tab. 1 for correspondence of code variables to model parameters in the manuscript."}
 fixed_param_dat <- NULL
+sigma_r_dat <- NULL
 
 for(i in ctrl_file$id){
   results_path <- here('results',i)
-  out <- read_rds(file.path(here("results"),i,"fixed_params_averaged.rds"))
-  out$name <- ctrl_file[ctrl_file$id==i,]$name
-  fixed_param_dat <- rbind(fixed_param_dat, out)
+  param_out <- read_rds(file.path(here("results"),i,"fixed_params_averaged.rds"))
+  param_out$name <- ctrl_file[ctrl_file$id==i,]$name
+  
+  sigma_r_out <- read_rds(file.path(here("results"),i,"sigma_r.rds"))
+  sigma_r_out$name <- ctrl_file[ctrl_file$id==i,]$name
+  
+  sigma_r_dat <- rbind(sigma_r_dat, sigma_r_out)
+  fixed_param_dat <- rbind(fixed_param_dat, param_out)
 }
 
-fixed_param_dat %>% 
+param_dat <- bind_rows(fixed_param_dat, sigma_r_dat)
+
+param_dat %>% 
   ggplot(aes(x=value, y=name)) +
   geom_density_ridges() + 
-  facet_wrap(~param, ncol=1, scales="free") +
+  facet_wrap(~param, ncol=3, scales="free") +
   labs(x=element_blank(), y="Model") +
   theme_bw() 
 

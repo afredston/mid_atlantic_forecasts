@@ -33,7 +33,19 @@ if(run_in_parallel == TRUE){
       select(value) %>% 
       mutate(param = "width")
     
-    tmp <- rbind(d, Topt, width) 
+    sigma_obs <- gather_draws(tmp_model, sigma_obs) %>% 
+      group_by(.iteration) %>% 
+      summarise(value = mean(.value)) %>%  
+      select(value) %>% 
+      mutate(param = "sigma_obs")
+    
+    mean_recruits <- gather_draws(tmp_model, log_mean_recruits) %>% 
+      group_by(.iteration) %>% 
+      summarise(value = mean(.value)) %>%  
+      select(value) %>% 
+      mutate(param = "mean_recruits", value = exp(value)) # exponentiate so not in log space 
+    
+    tmp <- rbind(d, Topt, width, sigma_obs, mean_recruits) 
     write_rds(tmp, file = file.path(results_path, "fixed_params_averaged.rds"))
     
     # now thin the latent states (pop dy over space and time) 
@@ -57,6 +69,14 @@ if(run_in_parallel == TRUE){
       filter(.draw %% 50 == 0) # thin to 1 sample every 50 iterations on each chain 
     write_rds(range_quantiles_thin, file = file.path(results_path, "range_quantiles_thin.rds"))
     
+    sigma_r <- tidybayes::spread_draws(tmp_model, sigma_r[year]) %>% 
+      group_by(.iteration) %>% 
+      summarise(value = mean(sigma_r)) %>%  
+      select(value) %>% 
+      mutate(param = "sigma_r")
+    
+    write_rds(sigma_r, file = file.path(results_path, "sigma_r.rds"))
+    
     rm(list=ls())
   }
   
@@ -74,3 +94,4 @@ if(run_in_parallel == TRUE){
   stopCluster(cl)
   
 } 
+
