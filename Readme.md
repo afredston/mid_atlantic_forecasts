@@ -2,6 +2,8 @@
 
 ## Alexa L. Fredston,* Daniel Ovando,* Lucas da Cunha Godoy, Jude Kong, Brandon Muffley, James T. Thorson, Malin L. Pinsky
 
+Please cite [the preprint](https://doi.org/10.32942/X24D00) (and read it) for code reuse. 
+
 \* *Co-first authors*
   
 ### Guide to project code
