@@ -2,7 +2,7 @@
 
 ## Alexa L. Fredston,* Daniel Ovando,* Lucas da Cunha Godoy, Jude Kong, Brandon Muffley, James T. Thorson, Malin L. Pinsky
 
-[Manuscript preprint now available to read and cite](https://doi.org/10.32942/X24D00). 
+[Manuscript preprint now available to read and cite (DOI: 10.32942/X24D00)](https://doi.org/10.32942/X24D00). 
 
 \* *Co-first authors*
   
