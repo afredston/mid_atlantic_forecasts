@@ -337,7 +337,7 @@ param_dat %>%
 
 ```
 
-```{r resid-by-yr, fig.cap="Residuals (estimated minus actual values) of range metrics each year over the ten-year testing period for the focal models in the main text: DRM with no temperature effect (DRM null) or a temperature effect on recruitment, mortality, or movement; a GAM SDM; and a persistence forecast. The horizontal dashed line indicates zero residuals, i.e., the estimate perfectly matches the testing data."}
+```{r resid-by-yr, fig.cap="Residuals (estimated minus observed values) of range metrics each year over the ten-year testing period for the focal models in the main text: DRM with no temperature effect (DRM null) or a temperature effect on recruitment, mortality, or movement; a GAM SDM; and a persistence forecast. The horizontal dashed line indicates zero residuals, i.e., the estimate perfectly matches the testing data."}
 dat_mod_by_yr |>  
   mutate(name = factor(name, levels=c('DRM null','DRM T-recruit','DRM T-mortality','DRM T-movement','GAM','Persistence')),
          feature = factor(feature, levels=c('Cold Edge','Centroid','Warm Edge'))) |> 
