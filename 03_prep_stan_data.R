@@ -5,13 +5,21 @@
 set.seed(42)
 library(tidyverse)
 library(here)
-library(lme4) # used for interpolating a few temperature values
+library(brms) # used for interpolating a few temperature values
 funs <- list.files("functions")
 sapply(funs, function(x) source(file.path("functions",x)))
 
 dat <- read_csv(here("processed-data","flounder_catch_at_length_fall_training.csv"))
+hauldat <- dat |> 
+  select(haulid, btemp, year, date, lat, lon) |> 
+  distinct()
 dat <- dat %>% filter(length >17)
+
 dat_test <- read_csv(here("processed-data","flounder_catch_at_length_fall_testing.csv"))
+hauldat_test <- dat_test |> 
+  select(haulid, btemp, year, date, lat, lon) |> 
+  distinct()
+
 dat_f_age_prep <- read_csv(here("processed-data","summer_flounder_F_by_age.csv")) %>%
   rename_with(str_to_lower)
 wt_at_age_raw <- read_csv(here("processed-data","summer_flounder_wt_at_age.csv"))
@@ -92,39 +100,108 @@ ny <- length(years)
 ny_proj <- length(years_proj)
 
 # get temperature data
-dat_train_sbt <- dat %>%   
-  mutate(lat_floor = floor(lat)) %>% 
+
+# how many data points per patch and year? 
+nhauls_dat_sbt <- hauldat |> 
+  filter(!is.na(btemp)) |> 
+  mutate(lat_floor = floor(lat)) |> 
+  group_by(year, lat_floor) |> 
+  summarise(n=n())
+
+nhauls_dat_test_sbt <- hauldat_test |> 
+  filter(!is.na(btemp)) |> 
+  mutate(lat_floor = floor(lat)) |> 
+  group_by(year, lat_floor) |> 
+  summarise(n=n())
+
+quantile(nhauls_dat_sbt$n, probs=0.05)
+quantile(nhauls_dat_test_sbt$n, probs = 0.05)
+# drop the lowest 5% of data, i.e., when there are <= 3 records per patch 
+
+sbt_patches_dat_ok <- nhauls_dat_sbt |> 
+  filter(n>3) |> 
+  mutate(key = paste0(year,"-",lat_floor))
+sbt_patches_dat_test_ok <- nhauls_dat_test_sbt |> 
+  filter(n>3)|> 
+  mutate(key = paste0(year,"-",lat_floor))
+
+# get temperature data if there is enough data ... 
+dat_train_sbt <- hauldat |> 
+  mutate(lat_floor = floor(lat),
+         key = paste0(year,"-",lat_floor)) %>% 
+  filter(key %in% sbt_patches_dat_ok$key) |> 
   group_by(lat_floor, year) %>% 
   summarise(sbt = mean(btemp, na.rm=TRUE)) %>% 
   ungroup() %>% 
-  filter(lat_floor %in% patches)%>% 
   mutate(patch = as.integer(as.factor(lat_floor)))
 
-dat_test_sbt <- dat_test %>%   
-  mutate(lat_floor = floor(lat)) %>% 
+dat_test_sbt <- hauldat_test |> 
+  mutate(lat_floor = floor(lat),
+         key = paste0(year,"-",lat_floor)) %>% 
+  filter(key %in% sbt_patches_dat_test_ok$key) |> 
   group_by(lat_floor, year) %>% 
   summarise(sbt = mean(btemp, na.rm=TRUE)) %>% 
   ungroup() %>% 
-  filter(lat_floor %in% patches)%>% 
-  mutate(patch = as.integer(as.factor(lat_floor))) %>% 
-  filter(!is.na(sbt))
+  mutate(patch = as.integer(as.factor(lat_floor)))
 
-# how many rows should each df have?
-nrow(dat_train_sbt)==(np*ny)
+# check that dataframes are complete--they are not because some temperature data are missing 
+nrow(dat_train_sbt)==(np*ny) # false because of missing data
 nrow(dat_test_sbt) == (np*ny_proj) # false because of missing data
 
-# some SBT data are missing: lat 35, 36, and 37 in 2008
-sbt_lme <- lmer(btemp ~ lat + (1|year), data=bind_rows(dat, dat_test))
-sbt_test_fill <- data.frame(
-  lat_floor = c(35, 36, 37),
-  year = rep(2008, 3),
-  patch = c(1,2,3),
-  sbt = c(predict(sbt_lme, newdata=data.frame(lat=35.5, year=2008)),
-          predict(sbt_lme, newdata=data.frame(lat=36.5, year=2008)),
-          predict(sbt_lme, newdata=data.frame(lat=35.5, year=2008))
-  ))
-dat_test_sbt <- bind_rows(dat_test_sbt, sbt_test_fill)
+# use one model to predict into both 
+sbt_brm <- brm(
+  btemp ~ lat + (1 | year), # note that this leverages the raw latitude and temperature data, not aggregated to patches 
+  data   = bind_rows(hauldat, hauldat_test),
+  family = gaussian(),
+  cores  = 4
+) 
+
+keys_train <- expand_grid(year = years, lat_floor = patches) |> 
+  mutate(key = paste0(year,"-",lat_floor)) 
+keys_test <- expand_grid(year = years_proj, lat_floor = patches) |> 
+  mutate(key = paste0(year,"-",lat_floor)) 
+
+# make dataframes of missing data to fill in; this will also identify year*patch combos with zero data, as well as those that don't meet the threshold set above for number of data points
+tmp_fill_train <- keys_train |> 
+  filter(!key %in% sbt_patches_dat_ok$key) |> 
+  mutate(lat = lat_floor + 0.5) # predict into center of patch 
+# note that these are mostly patches 1 and 10 missing 
+
+tmp_fill_test <- keys_test |> 
+  filter(!key %in% sbt_patches_dat_test_ok$key) |> 
+  mutate(lat = lat_floor + 0.5)  # predict into center of patch 
+# patch 10 often missing but also a data gap in 2007/2008
+
+# predict missing data
+pred_fill_train <- fitted(
+  sbt_brm, 
+  newdata = tmp_fill_train,
+  re_formula = NULL,
+  summary = TRUE
+)
+
+pred_fill_test <- fitted(
+  sbt_brm, 
+  newdata = tmp_fill_test,
+  re_formula = NULL,
+  summary = TRUE
+)
+
+# combine with lat/lon/year info 
+sbt_fill_train <- cbind(tmp_fill_train, pred_fill_train) |> 
+  select(year, lat_floor, Estimate) |> 
+  rename(sbt = Estimate) |> 
+  mutate(patch = lat_floor - min(patches) + 1)
+sbt_fill_test <- cbind(tmp_fill_test, pred_fill_test) |> 
+  select(year, lat_floor, Estimate) |> 
+  rename(sbt = Estimate)|> 
+  mutate(patch = lat_floor - min(patches) + 1)
+
+dat_test_sbt <- bind_rows(dat_test_sbt, sbt_fill_test)
 nrow(dat_test_sbt) == (np*ny_proj) # should be true now 
+
+dat_train_sbt <- bind_rows(dat_train_sbt, sbt_fill_train)
+nrow(dat_train_sbt) == (np*ny) # should be true now 
 
 # make length to age conversions
 length_at_age_key <-
