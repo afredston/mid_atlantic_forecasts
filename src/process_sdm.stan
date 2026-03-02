@@ -130,7 +130,8 @@ functions {
   matrix sbt, real Topt, real width,
   real exp_yn, int T_dep_mortality,
   int T_dep_movement, matrix f_a_y,
-  real m, real m_e, real d, real beta_t,
+// real m, 
+  real est_m, real m_e, real d, real beta_t,
   int T_dep_recruitment,
   int spawner_recruit_relationship,
   vector init_dep, real mean_recruits,
@@ -210,11 +211,11 @@ functions {
         for (y in 1 : ny_train) {
           if (T_dep_mortality == 1) {
             // m_e is the excess of mortality
-            surv[p, a, y] = exp(-((f_a_y[a, y] + m +
+            surv[p, a, y] = exp(-((f_a_y[a, y] + est_m +
                                    m_e * (1 - T_adjust[p, y])))) ; // adjust survival down when off of topt
           }
           if (T_dep_mortality == 0) {
-            surv[p, a, y] = exp(-(f_a_y[a, y] + m));
+            surv[p, a, y] = exp(-(f_a_y[a, y] + est_m));
           }
         }
       }
@@ -615,9 +616,8 @@ parameters {
   
   real log_r0;
 
-  array[T_dep_mortality] real<lower = 0, upper = 0.25> est_m; // used in place of `m`
-                                                      // when T_dep_mortality is
-                                                      // on
+  real<lower = 0, upper = 0.25> est_m; 
+  
   array[T_dep_mortality] real<lower = 0> m_e; // excess of mortality due temperature
 }
 transformed parameters {
@@ -714,7 +714,8 @@ transformed parameters {
     age_at_maturity, sbt, Topt, width,
     exp_yn, T_dep_mortality, T_dep_movement,
     f,
-    T_dep_mortality ? est_m[1] : m,
+ //   T_dep_mortality ? est_m[1] : m,
+ est_m, 
     T_dep_mortality ? m_e[1] : 0.0,
     d, beta_t, T_dep_recruitment,
     spawner_recruit_relationship, init_dep,
@@ -781,6 +782,8 @@ model {
   
   beta_obs_int ~ normal(pr_beta_obs_int_mu, pr_beta_obs_int_sigma);
   
+  est_m ~ normal(m, pr_est_m_sigma); 
+  
   if (process_error_toggle) {
     // the target is similar to the "~" syntax. However, it is more appropriate
     // when using toggles (imo)
@@ -793,7 +796,7 @@ model {
   if (T_dep_mortality) {
     real m_e_lambda; // parameter of exponential dist.
     m_e_lambda = - log(pr_m_e_pg1);
-    target += normal_lpdf(est_m[1] | m, pr_est_m_sigma);
+   // target += normal_lpdf(est_m[1] | m, pr_est_m_sigma);
     target += exponential_lpdf(m_e[1] | m_e_lambda);
   }
   
@@ -940,7 +943,8 @@ generated quantities {
     age_at_maturity, sbt_proj, Topt,
     width, exp_yn, T_dep_mortality,
     T_dep_movement, f_proj,
-    T_dep_mortality ? est_m[1] : m,
+    est_m, 
+  //  T_dep_mortality ? est_m[1] : m,
     T_dep_mortality ? m_e[1] : 0.0,
     d, beta_t,
     T_dep_recruitment,

@@ -39,13 +39,19 @@ if(run_in_parallel == TRUE){
       select(value) %>% 
       mutate(param = "sigma_obs")
     
+    alpha <- gather_draws(tmp_model, alpha) %>% 
+      group_by(.iteration) %>% 
+      summarise(value = mean(.value)) %>%  
+      select(value) %>% 
+      mutate(param = "alpha")
+    
     mean_recruits <- gather_draws(tmp_model, log_mean_recruits) %>% 
       group_by(.iteration) %>% 
       summarise(value = mean(.value)) %>%  
       select(value) %>% 
       mutate(param = "mean_recruits", value = exp(value)) # exponentiate so not in log space 
     
-    tmp <- rbind(d, Topt, width, sigma_obs, mean_recruits) 
+    tmp <- rbind(d, Topt, width, sigma_obs, mean_recruits, alpha) 
     write_rds(tmp, file = file.path(results_path, "fixed_params_averaged.rds"))
     
     # now thin the latent states (pop dy over space and time) 

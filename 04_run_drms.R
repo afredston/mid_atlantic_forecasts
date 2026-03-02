@@ -16,7 +16,7 @@ rstan_options(javascript = FALSE, auto_write = TRUE)
 
 run_in_parallel <- TRUE
 if(run_in_parallel == TRUE){
-  n_cores <- 40  # set cores 
+  n_cores <- 160  # set cores 
 }
 
 # load fit_drm function 

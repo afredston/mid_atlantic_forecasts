@@ -16,6 +16,7 @@ library(ggh4x)
 library(ggdist)
 library(directlabels)
 library(patchwork)
+library(brms)
 theme_set(theme_bw())
 
 # data
@@ -49,7 +50,15 @@ for(i in ctrl_file$id){
 ############
 
 # did temperature change in the trawl surveys? 
-summary(lm(formula = "btemp ~ year", data = bind_rows(dat_catchonly, dat_test_catchonly) %>%   select(btemp, year, lat)))
+summary(
+        brm(btemp ~ year, 
+          data = bind_rows(dat_catchonly, dat_test_catchonly) %>%   select(btemp, year, lat),
+          family = gaussian(), 
+          cores = 4, 
+          chains = 4, 
+          iter = 2000
+        )
+        )
 
 # how many hauls? 
 length(unique(dat$haulid)) + length(unique(dat_test$haulid)) #12203
@@ -82,14 +91,23 @@ nrow(convergence_checks %>%
               successful_chains >= chains_cutoff))
 
 # did summer flounder shift north? 
-lm_dat <- points_for_plot %>% 
+shift_dat <- points_for_plot %>% 
   filter(name == 'Observed')
-summary(lm(value_tmp ~ year, data = lm_dat %>% 
-             filter(feature == 'Centroid')))
-summary(lm(value_tmp ~ year, data = lm_dat %>% 
-             filter(feature == 'Warm Edge')))
-summary(lm(value_tmp ~ year, data = lm_dat %>% 
-             filter(feature == 'Cold Edge')))
+summary(brm(value_tmp ~ year, 
+            data = lm_dat %>% 
+             filter(feature == 'Centroid'),
+            family = gaussian(),
+            cores = 4))
+summary(brm(value_tmp ~ year, 
+            data = lm_dat %>% 
+             filter(feature == 'Warm Edge'),
+            family = gaussian(),
+            cores = 4))
+summary(brm(value_tmp ~ year, 
+            data = lm_dat %>% 
+             filter(feature == 'Cold Edge'),
+            family = gaussian(),
+            cores = 4))
 
 # summarize posteriors for each model 
 fixed_param_dat |> group_by(name, param) |> summarise(

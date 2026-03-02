@@ -126,7 +126,7 @@ boop <- rbind(
   data.frame(Parameter = "$\\beta_{obs,0}$", `Prior Distribution` = "Normal $\\sim (-100, 4)$"),
   data.frame(Parameter = "$z$", `Prior Distribution` = "Normal $\\sim (0, 1)$"),
   data.frame(Parameter = "$\\sigma_{proc}$", `Prior Distribution` = "Normal $\\sim (0.2, 0.1)$"),
-  data.frame(Parameter = "$\\sigma_{obs}$", `Prior Distribution` = "Normal $\\sim (0.21, 0.2)$"),
+  data.frame(Parameter = "$\\sigma_{obs}$", `Prior Distribution` = "Normal $\\sim (0.2, 0.2)$"),
   data.frame(Parameter = "$width$", `Prior Distribution` = "Normal $\\sim (4, 2)$"),
   data.frame(Parameter = "$T_{opt}$", `Prior Distribution` = "Normal $\\sim (18, 2)$"),
   data.frame(Parameter = "$d$", `Prior Distribution` = "Normal $\\sim (0.01, 0.1)$"),
