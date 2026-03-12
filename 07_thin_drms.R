@@ -1,10 +1,12 @@
+library(tidyverse)
+library(here)
 
 ctrl_file <- read_csv(file=here("ctrl_file_used.csv"))
 run_in_parallel <- TRUE
 
 if(run_in_parallel == TRUE){
   library(parallel)
-  num_cores <- 40
+  num_cores <- 100
 }
 
 # thin and tidy posteriors 
@@ -39,11 +41,18 @@ if(run_in_parallel == TRUE){
       select(value) %>% 
       mutate(param = "sigma_obs")
     
-    alpha <- gather_draws(tmp_model, alpha) %>% 
+    alpha <- gather_draws(tmp_model, alpha[i]) %>% 
+      filter(i == 1) %>% 
+      group_by(.iteration) %>% 
+      summarise(value = mean(.value), .groups = "drop") %>%  
+      select(value) %>% 
+      mutate(param = "alpha")
+    
+    est_m <- gather_draws(tmp_model, est_m) %>% 
       group_by(.iteration) %>% 
       summarise(value = mean(.value)) %>%  
       select(value) %>% 
-      mutate(param = "alpha")
+      mutate(param = "est_m")
     
     mean_recruits <- gather_draws(tmp_model, log_mean_recruits) %>% 
       group_by(.iteration) %>% 
@@ -51,7 +60,7 @@ if(run_in_parallel == TRUE){
       select(value) %>% 
       mutate(param = "mean_recruits", value = exp(value)) # exponentiate so not in log space 
     
-    tmp <- rbind(d, Topt, width, sigma_obs, mean_recruits, alpha) 
+    tmp <- rbind(d, Topt, width, sigma_obs, mean_recruits, alpha, est_m) 
     write_rds(tmp, file = file.path(results_path, "fixed_params_averaged.rds"))
     
     # now thin the latent states (pop dy over space and time) 

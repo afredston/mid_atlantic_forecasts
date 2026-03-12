@@ -10,7 +10,7 @@ ctrl_file <- read_csv("ctrl_file_used.csv")
 
 run_in_parallel <- TRUE
 
-num_iters_per_chain <- 3000 # no longer part of the fitted stan object so copying over here from run_drms 
+num_iters_per_chain <- 3000 # no longer part of the fitted stan object so copying over here from run_drms (iters - warmups)
 
 if(run_in_parallel == TRUE){
   library(parallel)
