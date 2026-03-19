@@ -22,6 +22,8 @@ library(ggplot2)
 library(kableExtra)
 library(tidybayes)
 library(ggridges)
+library(brms)
+library(coda)
 dat <- read_csv(here("processed-data","flounder_catch_at_length_fall_training.csv"))
 dat_test <- read_csv(here("processed-data","flounder_catch_at_length_fall_testing.csv"))
 dat_catchonly <- read_csv(here("processed-data","flounder_catch_fall_training.csv"))
@@ -33,6 +35,10 @@ dat_mod_by_yr <- read_csv(file=here("processed-data","model_performance_by_year.
          type = ifelse(str_detect(name, "DRM"),"DRM", name))
 load(here("processed-data","stan_data_prep.Rdata"))
 
+run_in_parallel <- TRUE
+if(run_in_parallel == TRUE){
+  n_cores <- 100  # set cores 
+}
 # drm_outputs_available_locally <- TRUE
 # 
 # if(drm_outputs_available_locally){
@@ -144,55 +150,109 @@ kbl(boop, booktabs = TRUE, caption = "Hyperparameters used in the DRM.",
 ```
 
 ```{r btemp-train}
-btemp.train.tbl <- dat_catchonly %>% 
-  select(btemp, year, lat) |> 
-  mutate(lat_floor = floor(lat)) |> 
-  group_by(lat_floor) %>%
-  nest() %>%
-  mutate(
-    model = purrr::map(data, ~lm(btemp ~ year, data = .x)), 
-    tidymodel = purrr::map(model, broom::tidy)
-  ) %>% 
-  unnest(tidymodel) %>%
-  filter(term=="year") |> 
-  dplyr::select(lat_floor, estimate, std.error, p.value ) |> 
-  mutate(
-    Estimate = round(estimate, digits=3), 
-    
-    `Standard Error` = round(std.error, digits=3), 
-    `P-value` = round(p.value, digits=3), 
-    .keep="none") |> 
-  rename(Patch = lat_floor) |> 
-  arrange(Patch)
 
-kbl(btemp.train.tbl, booktabs = TRUE, caption = "Linear regressions of sea bottom temperature (measured in the trawl surveys) on year within each patch during the model training interval (1972-2006). Values are rounded to three digits.",
+if(!file.exists(here("results","draws_btemp_train.rds"))) {
+  if(run_in_parallel==TRUE) {
+    library(foreach)
+    library(doParallel)
+    
+    cl <- makeCluster(n_cores) 
+    registerDoParallel(cl)
+    
+    draws_btemp_train <- foreach(i = patches, .combine = bind_rows, .packages = c("brms","dplyr")) %dopar% 
+      
+      {
+        
+        dat_bind <- dat_catchonly %>% 
+          select(btemp, year, lat) |> 
+          mutate(lat_floor = floor(lat)) |> 
+          filter(lat_floor == i)
+        
+        brm_tmp <- brm(btemp ~ year, data = dat_bind, family = gaussian(), chains = 4, iter = 2000) 
+        brm_tmp_draws <- as_draws_df(brm_tmp)
+        
+        brm_tmp_draws |> 
+          select(b_year, .chain, .iteration, .draw) |> 
+          mutate(Patch = i)
+        
+      }
+    write_rds(draws_btemp_train, here("results", "draws_btemp_train.rds"))
+    stopCluster(cl)
+    
+  }
+} else { draws_btemp_train <- read_rds(here("results","draws_btemp_train.rds")) }
+
+btemp.train.tbl <- draws_btemp_train |> 
+  group_by(Patch) |> 
+  summarise(
+    Median = signif(median(b_year), 3),
+    HPDI_lower = {
+      h <- coda::HPDinterval(coda::as.mcmc(b_year), 0.95)
+      h[1]
+    },
+    HPDI_upper = {
+      h <- coda::HPDinterval(coda::as.mcmc(b_year), 0.95)
+      h[2]
+    }
+  ) |> 
+  mutate(HPDI = paste0(signif(HPDI_lower, 3), " — ", signif(HPDI_upper, 3)), .keep="unused")
+
+
+kbl(btemp.train.tbl, booktabs = TRUE, caption = "Bayesian linear regressions of sea bottom temperature (measured in the trawl surveys) on year within each patch during the model training interval (1972-2006) with Gaussian errors, summarized by the median and 95% Highest Posterior Density Interval (HPDI) of the posterior estimate for the slope term. Values are truncated at three significant digits.",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 ```
 
 ```{r btemp-test}
-btemp.test.tbl <- dat_test_catchonly %>% 
-  select(btemp, year, lat) |> 
-  mutate(lat_floor = floor(lat)) |> 
-  group_by(lat_floor) %>%
-  nest() %>%
-  mutate(
-    model = purrr::map(data, ~lm(btemp ~ year, data = .x)), 
-    tidymodel = purrr::map(model, broom::tidy)
-  ) %>% 
-  unnest(tidymodel) %>%
-  filter(term=="year") |> 
-  dplyr::select(lat_floor, estimate, std.error, p.value ) |> 
-  mutate(
-    Estimate = round(estimate, digits=3), 
-    
-    `Standard Error` = round(std.error, digits=3), 
-    `P-value` = round(p.value, digits=3), 
-    .keep="none") |> 
-  rename(Patch = lat_floor) |> 
-  arrange(Patch)
 
-kbl(btemp.test.tbl, booktabs = TRUE, caption = "Linear regressions of sea bottom temperature (measured in the trawl surveys) on year within each patch during the model testing interval (2007-2016). Values are rounded to three digits.",
+if(!file.exists(here("results","draws_btemp_test.rds"))) {
+  if(run_in_parallel==TRUE) {
+    library(foreach)
+    library(doParallel)
+    
+    cl <- makeCluster(n_cores) 
+    registerDoParallel(cl)
+    
+    draws_btemp_test <- foreach(i = patches, .combine = bind_rows, .packages = c("brms","dplyr")) %dopar% 
+      
+      {
+        
+        dat_bind <- dat_test_catchonly %>% 
+          select(btemp, year, lat) |> 
+          mutate(lat_floor = floor(lat)) |> 
+          filter(lat_floor == i)
+        
+        brm_tmp <- brm(btemp ~ year, data = dat_bind, family = gaussian(), chains = 4, iter = 2000) 
+        brm_tmp_draws <- as_draws_df(brm_tmp)
+        
+        brm_tmp_draws |> 
+          select(b_year, .chain, .iteration, .draw) |> 
+          mutate(Patch = i)
+        
+      }
+    write_rds(draws_btemp_test, here("results", "draws_btemp_test.rds"))
+    stopCluster(cl)
+    
+  }
+} else { draws_btemp_test <- read_rds(here("results","draws_btemp_test.rds")) }
+
+btemp.test.tbl <- draws_btemp_test |> 
+  group_by(Patch) |> 
+  summarise(
+    Median = signif(median(b_year), 3),
+    HPDI_lower = {
+      h <- coda::HPDinterval(coda::as.mcmc(b_year), 0.95)
+      h[1]
+    },
+    HPDI_upper = {
+      h <- coda::HPDinterval(coda::as.mcmc(b_year), 0.95)
+      h[2]
+    }
+  ) |> 
+  mutate(HPDI = paste0(signif(HPDI_lower, 3), " — ", signif(HPDI_upper, 3)), .keep="unused")
+
+
+kbl(btemp.train.tbl, booktabs = TRUE, caption = "Bayesian linear regressions of sea bottom temperature (measured in the trawl surveys) on year within each patch during the model testing interval (2007-2016) with Gaussian errors, summarized by the median and 95% Highest Posterior Density Interval (HPDI) of the posterior estimate for the slope term. Values are truncated at three significant digits.",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 ```
@@ -320,7 +380,8 @@ param_dat %>%
   geom_density_ridges() + 
   facet_wrap(~param, ncol=3, scales="free") +
   labs(x=element_blank(), y="Model") +
-  theme_bw() 
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.8)) 
 
 # observed_abund_posterior_predictive <- tidybayes::spread_draws(tmp_model, density_obs_proj[patch,year])
 # centroid_proj <- tidybayes::spread_draws(tmp_model, centroid_proj[year]) 
@@ -342,14 +403,14 @@ dat_mod_by_yr |>
   mutate(name = factor(name, levels=c('DRM null','DRM T-recruit','DRM T-mortality','DRM T-movement','GAM','Persistence')),
          feature = factor(feature, levels=c('Cold Edge','Centroid','Warm Edge'))) |> 
   ggplot(aes(x=year, y=resid)) +
-    geom_hline(aes(yintercept=0), color="darkgrey", linetype="dashed") +
-geom_point() +
+  geom_hline(aes(yintercept=0), color="darkgrey", linetype="dashed") +
+  geom_point() +
   geom_line() +
   facet_grid(feature ~ name) +
   scale_x_continuous(breaks=seq(2008, 2016, 2)) +
   labs(x="Year", y = "Residuals") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90),
-       strip.text.x = element_text(size = 7))
+        strip.text.x = element_text(size = 7))
 ```
 
