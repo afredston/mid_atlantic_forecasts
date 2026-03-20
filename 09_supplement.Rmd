@@ -281,19 +281,83 @@ bind_rows(dat_catchonly, dat_test_catchonly) %>%
 
 results_path <- here('results',"v0.13")
 
-density_hat_thin <- read_rds(here(results_path, "density_hat_thin.rds")) %>%  
+
+density_hat_thin <- read_rds(here(results_path, "density_hat_thin.rds")) |> 
+  ungroup() %>%  
   mutate(year = year + min(years) - 1,
          patch = patch + min(patches) - 1) 
 
+density_hat_50 <- density_hat_thin |>
+  arrange(year) |>
+  group_by(year, patch) |>
+  group_split(.keep=TRUE) |> 
+  lapply(\(x) {
+    ci <- coda::HPDinterval(coda::as.mcmc(x$density_hat),
+                            prob = .50)
+    tibble(
+      lower = ci[1], 
+      upper = ci[2],
+      year = unique(x$year),
+      patch = unique(x$patch)
+    )
+  }) |>
+  bind_rows() |> 
+  mutate(ci_level = "50")
+
+density_hat_80 <- density_hat_thin |>
+  arrange(year) |>
+  group_by(year, patch) |>
+  group_split(.keep=TRUE) |> 
+  lapply(\(x) {
+    ci <- coda::HPDinterval(coda::as.mcmc(x$density_hat),
+                            prob = .80)
+    tibble(
+      lower = ci[1], 
+      upper = ci[2],
+      year = unique(x$year),
+      patch = unique(x$patch)
+    )
+  }) |>
+  bind_rows() |> 
+  mutate(ci_level = "80")
+
+
+density_hat_95 <- density_hat_thin |>
+  arrange(year) |>
+  group_by(year, patch) |>
+  group_split(.keep=TRUE) |> 
+  lapply(\(x) {
+    ci <- coda::HPDinterval(coda::as.mcmc(x$density_hat),
+                            prob = .95)
+    tibble(
+      lower = ci[1], 
+      upper = ci[2],
+      year = unique(x$year),
+      patch = unique(x$patch)
+    )
+  }) |>
+  bind_rows() |> 
+  mutate(ci_level = "95")
+
+density_hat_ribbons <- bind_rows(density_hat_50, density_hat_80, density_hat_95) |> 
+  mutate(ci_level = factor(ci_level, levels=c("95","80","50"))) # for plotting
+
+density_hat_median <- density_hat_thin |> 
+  group_by(patch, year) |> 
+  summarise(median = median(density_hat))
+
 plot_out <- density_hat_thin %>% 
-  ggplot(aes(year, density_hat)) + 
-  stat_lineribbon() +
+  ggplot() + 
+  geom_ribbon(data = density_hat_ribbons, aes(x=year, ymin=lower, ymax=upper, fill=ci_level), alpha = 0.7) + 
+  geom_line(data = density_hat_median, aes(x=year, y=median)) +
   geom_point(data = dat_train_dens %>% mutate(year = year + min(years) - 1, patch = lat_floor), aes(year, mean_dens), color = "red") +
   facet_wrap(~patch, scales = "free_y") +
-  labs(x="Year",y="Density", title = ctrl_file |> filter(id == "v0.13" ) |> pull(name)) + 
+  labs(x="Year",y="Density", title = ctrl_file |> filter(id == "v0.39" ) |> pull(name)) + 
   scale_fill_brewer() +
   theme(legend.title = element_blank(),
-        axis.text.x = element_text(angle = 45, vjust=0.8))
+        axis.text.x = element_text(angle = 45, vjust=0.8)) +
+  theme_bw() 
+
 print(plot_out)
 ```
 
@@ -301,19 +365,82 @@ print(plot_out)
 
 results_path <- here('results',"v0.40")
 
-density_hat_thin <- read_rds(here(results_path, "density_hat_thin.rds")) %>%  
+density_hat_thin <- read_rds(here(results_path, "density_hat_thin.rds")) |> 
+  ungroup() %>%  
   mutate(year = year + min(years) - 1,
          patch = patch + min(patches) - 1) 
 
+density_hat_50 <- density_hat_thin |>
+  arrange(year) |>
+  group_by(year, patch) |>
+  group_split(.keep=TRUE) |> 
+  lapply(\(x) {
+    ci <- coda::HPDinterval(coda::as.mcmc(x$density_hat),
+                            prob = .50)
+    tibble(
+      lower = ci[1], 
+      upper = ci[2],
+      year = unique(x$year),
+      patch = unique(x$patch)
+    )
+  }) |>
+  bind_rows() |> 
+  mutate(ci_level = "50")
+
+density_hat_80 <- density_hat_thin |>
+  arrange(year) |>
+  group_by(year, patch) |>
+  group_split(.keep=TRUE) |> 
+  lapply(\(x) {
+    ci <- coda::HPDinterval(coda::as.mcmc(x$density_hat),
+                            prob = .80)
+    tibble(
+      lower = ci[1], 
+      upper = ci[2],
+      year = unique(x$year),
+      patch = unique(x$patch)
+    )
+  }) |>
+  bind_rows() |> 
+  mutate(ci_level = "80")
+
+
+density_hat_95 <- density_hat_thin |>
+  arrange(year) |>
+  group_by(year, patch) |>
+  group_split(.keep=TRUE) |> 
+  lapply(\(x) {
+    ci <- coda::HPDinterval(coda::as.mcmc(x$density_hat),
+                            prob = .95)
+    tibble(
+      lower = ci[1], 
+      upper = ci[2],
+      year = unique(x$year),
+      patch = unique(x$patch)
+    )
+  }) |>
+  bind_rows() |> 
+  mutate(ci_level = "95")
+
+density_hat_ribbons <- bind_rows(density_hat_50, density_hat_80, density_hat_95) |> 
+  mutate(ci_level = factor(ci_level, levels=c("95","80","50"))) # for plotting
+
+density_hat_median <- density_hat_thin |> 
+  group_by(patch, year) |> 
+  summarise(median = median(density_hat))
+
 plot_out <- density_hat_thin %>% 
-  ggplot(aes(year, density_hat)) + 
-  stat_lineribbon() +
+  ggplot() + 
+  geom_ribbon(data = density_hat_ribbons, aes(x=year, ymin=lower, ymax=upper, fill=ci_level), alpha = 0.7) + 
+  geom_line(data = density_hat_median, aes(x=year, y=median)) +
   geom_point(data = dat_train_dens %>% mutate(year = year + min(years) - 1, patch = lat_floor), aes(year, mean_dens), color = "red") +
   facet_wrap(~patch, scales = "free_y") +
-  labs(x="Year",y="Density", title = ctrl_file |> filter(id == "v0.40" ) |> pull(name)) + 
+  labs(x="Year",y="Density", title = ctrl_file |> filter(id == "v0.39" ) |> pull(name)) + 
   scale_fill_brewer() +
   theme(legend.title = element_blank(),
-        axis.text.x = element_text(angle = 45, vjust=0.8))
+        axis.text.x = element_text(angle = 45, vjust=0.8)) +
+  theme_bw() 
+
 print(plot_out)
 ```
 
@@ -321,19 +448,82 @@ print(plot_out)
 
 results_path <- here('results',"v0.41")
 
-density_hat_thin <- read_rds(here(results_path, "density_hat_thin.rds")) %>%  
+density_hat_thin <- read_rds(here(results_path, "density_hat_thin.rds")) |> 
+  ungroup() %>%  
   mutate(year = year + min(years) - 1,
          patch = patch + min(patches) - 1) 
 
+density_hat_50 <- density_hat_thin |>
+  arrange(year) |>
+  group_by(year, patch) |>
+  group_split(.keep=TRUE) |> 
+  lapply(\(x) {
+    ci <- coda::HPDinterval(coda::as.mcmc(x$density_hat),
+                            prob = .50)
+    tibble(
+      lower = ci[1], 
+      upper = ci[2],
+      year = unique(x$year),
+      patch = unique(x$patch)
+    )
+  }) |>
+  bind_rows() |> 
+  mutate(ci_level = "50")
+
+density_hat_80 <- density_hat_thin |>
+  arrange(year) |>
+  group_by(year, patch) |>
+  group_split(.keep=TRUE) |> 
+  lapply(\(x) {
+    ci <- coda::HPDinterval(coda::as.mcmc(x$density_hat),
+                            prob = .80)
+    tibble(
+      lower = ci[1], 
+      upper = ci[2],
+      year = unique(x$year),
+      patch = unique(x$patch)
+    )
+  }) |>
+  bind_rows() |> 
+  mutate(ci_level = "80")
+
+
+density_hat_95 <- density_hat_thin |>
+  arrange(year) |>
+  group_by(year, patch) |>
+  group_split(.keep=TRUE) |> 
+  lapply(\(x) {
+    ci <- coda::HPDinterval(coda::as.mcmc(x$density_hat),
+                            prob = .95)
+    tibble(
+      lower = ci[1], 
+      upper = ci[2],
+      year = unique(x$year),
+      patch = unique(x$patch)
+    )
+  }) |>
+  bind_rows() |> 
+  mutate(ci_level = "95")
+
+density_hat_ribbons <- bind_rows(density_hat_50, density_hat_80, density_hat_95) |> 
+  mutate(ci_level = factor(ci_level, levels=c("95","80","50"))) # for plotting
+
+density_hat_median <- density_hat_thin |> 
+  group_by(patch, year) |> 
+  summarise(median = median(density_hat))
+
 plot_out <- density_hat_thin %>% 
-  ggplot(aes(year, density_hat)) + 
-  stat_lineribbon() +
+  ggplot() + 
+  geom_ribbon(data = density_hat_ribbons, aes(x=year, ymin=lower, ymax=upper, fill=ci_level), alpha = 0.7) + 
+  geom_line(data = density_hat_median, aes(x=year, y=median)) +
   geom_point(data = dat_train_dens %>% mutate(year = year + min(years) - 1, patch = lat_floor), aes(year, mean_dens), color = "red") +
   facet_wrap(~patch, scales = "free_y") +
-  labs(x="Year",y="Density", title = ctrl_file |> filter(id == "v0.41" ) |> pull(name)) + 
+  labs(x="Year",y="Density", title = ctrl_file |> filter(id == "v0.39" ) |> pull(name)) + 
   scale_fill_brewer() +
   theme(legend.title = element_blank(),
-        axis.text.x = element_text(angle = 45, vjust=0.8))
+        axis.text.x = element_text(angle = 45, vjust=0.8)) +
+  theme_bw() 
+
 print(plot_out)
 ```
 
@@ -341,19 +531,82 @@ print(plot_out)
 ```{r T-movement-DRM-by-patch, fig.cap="Median density estimated by the temperature-dependent movement DRM in the training dataset by patch and year (black line). Blue shading represents the 50%, 80%, and 95% credible intervals. Red points are the observed data. Note that y-axes vary by patch."}
 results_path <- here('results',"v0.39")
 
-density_hat_thin <- read_rds(here(results_path, "density_hat_thin.rds")) %>%  
+density_hat_thin <- read_rds(here(results_path, "density_hat_thin.rds")) |> 
+  ungroup() %>%  
   mutate(year = year + min(years) - 1,
          patch = patch + min(patches) - 1) 
 
+density_hat_50 <- density_hat_thin |>
+  arrange(year) |>
+  group_by(year, patch) |>
+  group_split(.keep=TRUE) |> 
+  lapply(\(x) {
+    ci <- coda::HPDinterval(coda::as.mcmc(x$density_hat),
+                            prob = .50)
+    tibble(
+      lower = ci[1], 
+      upper = ci[2],
+      year = unique(x$year),
+      patch = unique(x$patch)
+    )
+  }) |>
+  bind_rows() |> 
+  mutate(ci_level = "50")
+
+density_hat_80 <- density_hat_thin |>
+  arrange(year) |>
+  group_by(year, patch) |>
+  group_split(.keep=TRUE) |> 
+  lapply(\(x) {
+    ci <- coda::HPDinterval(coda::as.mcmc(x$density_hat),
+                            prob = .80)
+    tibble(
+      lower = ci[1], 
+      upper = ci[2],
+      year = unique(x$year),
+      patch = unique(x$patch)
+    )
+  }) |>
+  bind_rows() |> 
+  mutate(ci_level = "80")
+
+
+density_hat_95 <- density_hat_thin |>
+  arrange(year) |>
+  group_by(year, patch) |>
+  group_split(.keep=TRUE) |> 
+  lapply(\(x) {
+    ci <- coda::HPDinterval(coda::as.mcmc(x$density_hat),
+                            prob = .95)
+    tibble(
+      lower = ci[1], 
+      upper = ci[2],
+      year = unique(x$year),
+      patch = unique(x$patch)
+    )
+  }) |>
+  bind_rows() |> 
+  mutate(ci_level = "95")
+
+density_hat_ribbons <- bind_rows(density_hat_50, density_hat_80, density_hat_95) |> 
+  mutate(ci_level = factor(ci_level, levels=c("95","80","50"))) # for plotting
+
+density_hat_median <- density_hat_thin |> 
+  group_by(patch, year) |> 
+  summarise(median = median(density_hat))
+
 plot_out <- density_hat_thin %>% 
-  ggplot(aes(year, density_hat)) + 
-  stat_lineribbon() +
+  ggplot() + 
+  geom_ribbon(data = density_hat_ribbons, aes(x=year, ymin=lower, ymax=upper, fill=ci_level), alpha = 0.7) + 
+  geom_line(data = density_hat_median, aes(x=year, y=median)) +
   geom_point(data = dat_train_dens %>% mutate(year = year + min(years) - 1, patch = lat_floor), aes(year, mean_dens), color = "red") +
   facet_wrap(~patch, scales = "free_y") +
   labs(x="Year",y="Density", title = ctrl_file |> filter(id == "v0.39" ) |> pull(name)) + 
   scale_fill_brewer() +
   theme(legend.title = element_blank(),
-        axis.text.x = element_text(angle = 45, vjust=0.8))
+        axis.text.x = element_text(angle = 45, vjust=0.8)) +
+  theme_bw() 
+
 print(plot_out)
 ```
 
