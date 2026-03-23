@@ -352,7 +352,7 @@ plot_out <- density_hat_thin %>%
   geom_line(data = density_hat_median, aes(x=year, y=median)) +
   geom_point(data = dat_train_dens %>% mutate(year = year + min(years) - 1, patch = lat_floor), aes(year, mean_dens), color = "red") +
   facet_wrap(~patch, scales = "free_y") +
-  labs(x="Year",y="Density", title = ctrl_file |> filter(id == "v0.39" ) |> pull(name)) + 
+  labs(x="Year",y="Density", title = ctrl_file |> filter(id == "v0.13" ) |> pull(name)) + 
   scale_fill_brewer() +
   theme(legend.title = element_blank(),
         axis.text.x = element_text(angle = 45, vjust=0.8)) +
@@ -435,7 +435,7 @@ plot_out <- density_hat_thin %>%
   geom_line(data = density_hat_median, aes(x=year, y=median)) +
   geom_point(data = dat_train_dens %>% mutate(year = year + min(years) - 1, patch = lat_floor), aes(year, mean_dens), color = "red") +
   facet_wrap(~patch, scales = "free_y") +
-  labs(x="Year",y="Density", title = ctrl_file |> filter(id == "v0.39" ) |> pull(name)) + 
+  labs(x="Year",y="Density", title = ctrl_file |> filter(id == "v0.40" ) |> pull(name)) + 
   scale_fill_brewer() +
   theme(legend.title = element_blank(),
         axis.text.x = element_text(angle = 45, vjust=0.8)) +
@@ -518,7 +518,7 @@ plot_out <- density_hat_thin %>%
   geom_line(data = density_hat_median, aes(x=year, y=median)) +
   geom_point(data = dat_train_dens %>% mutate(year = year + min(years) - 1, patch = lat_floor), aes(year, mean_dens), color = "red") +
   facet_wrap(~patch, scales = "free_y") +
-  labs(x="Year",y="Density", title = ctrl_file |> filter(id == "v0.39" ) |> pull(name)) + 
+  labs(x="Year",y="Density", title = ctrl_file |> filter(id == "v0.41" ) |> pull(name)) + 
   scale_fill_brewer() +
   theme(legend.title = element_blank(),
         axis.text.x = element_text(angle = 45, vjust=0.8)) +

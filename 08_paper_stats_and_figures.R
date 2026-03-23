@@ -54,16 +54,21 @@ if(run_in_parallel == TRUE){
 # calculate all the statistics reported in-text (nothing gets saved in this code block, just printed to the console)
 ############
 
-# did temperature change in the trawl surveys? 
-summary(
-  brm(btemp ~ year, 
-      data = bind_rows(dat_catchonly, dat_test_catchonly) %>%   select(btemp, year, lat),
-      family = gaussian(), 
-      cores = 4, 
-      chains = 4, 
-      iter = 2000
-  )
-)
+# did temperature change in the trawl surveys across all time? 
+brm(btemp ~ year, 
+    data = bind_rows(dat_catchonly, dat_test_catchonly) %>%   select(btemp, year, lat),
+    family = gaussian(), 
+    cores = 4, 
+    chains = 4, 
+    iter = 2000
+)|>
+  posterior::as_draws_df() |>
+  (\(x) tibble::tibble(
+    term = "year",
+    median = median(x$b_year),
+    hpdi_lower = coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95)[1],
+    hpdi_upper = coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95)[2]
+  ))()
 
 # how many hauls? 
 length(unique(dat$haulid)) + length(unique(dat_test$haulid)) #12203
@@ -96,29 +101,42 @@ nrow(convergence_checks %>%
               successful_chains >= chains_cutoff)) # all of them
 
 
-# did summer flounder shift north? 
-summary(brm(value_tmp ~ year, 
-            data = points_for_plot %>% 
-              filter(name == 'Observed') %>% 
-              filter(feature == 'Centroid'),
-            family = gaussian(),
-            cores = 4))
-summary(brm(value_tmp ~ year, 
-            data = points_for_plot %>% 
-              filter(name == 'Observed') %>% 
-              filter(feature == 'Warm Edge'),
-            family = gaussian(),
-            cores = 4))
-summary(brm(value_tmp ~ year, 
-            data = points_for_plot %>% 
-              filter(name == 'Observed') %>% 
-              filter(feature == 'Cold Edge'),
-            family = gaussian(),
-            cores = 4))
+# did summer flounder shift north in the testing interval? 
+brm(value_tmp ~ year, 
+    data = points_for_plot %>% 
+      filter(name == 'Observed') %>% 
+      filter(feature == 'Centroid'),
+    family = gaussian(),
+    cores = 4) |> 
+  posterior::as_draws_df() |>
+  (\(x) coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95))()
 
-fixed_param_dat |> group_by(name, param) |> summarise(
-  lower = quantile(value, 0.05), 
-  upper = quantile(value, 0.95))
+brm(value_tmp ~ year, 
+    data = points_for_plot %>% 
+      filter(name == 'Observed') %>% 
+      filter(feature == 'Warm Edge'),
+    family = gaussian(),
+    cores = 4) |> 
+  posterior::as_draws_df() |>
+  (\(x) coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95))()
+
+brm(value_tmp ~ year, 
+    data = points_for_plot %>% 
+      filter(name == 'Observed') %>% 
+      filter(feature == 'Cold Edge'),
+    family = gaussian(),
+    cores = 4) |> 
+  posterior::as_draws_df() |>
+  (\(x) coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95))()
+
+
+print(fixed_param_dat |> group_by(name, param) |> 
+        summarise(
+          median = median(value),
+          hpdi_lower = coda::HPDinterval(coda::as.mcmc(value), prob = 0.95)[1],
+          hpdi_upper = coda::HPDinterval(coda::as.mcmc(value), prob = 0.95)[2],
+          .groups = "drop"
+        ), n=28)
 
 ############
 # make area map figure
@@ -295,7 +313,7 @@ gg_btemp <- ggplot() +
         plot.margin=margin(t = 15, r = 5, b = 5, l = 5, unit = "pt")) + 
   guides(fill = guide_colourbar(barwidth = 0.75, barheight = 25, title="SBT", reverse=TRUE)) +
   NULL
-gg_btemp
+
 ggsave(gg_btemp, filename=here("results","btemp_lat_time.png"), width=110, height=70, scale = 2.1, dpi=600, units="mm")
 
 
@@ -377,7 +395,7 @@ gg_mod_compare <- dat_mod_compare %>%
              COL == 3 ~ scale_x_discrete(guide = 'none'))
   ) +
   NULL
-gg_mod_compare
+
 ggsave(gg_mod_compare, filename=here("results","bias_v_rmse.png"), width=110, height=80, dpi=600, units="mm", scale=1.5)
 
 
@@ -411,8 +429,56 @@ generate_drm_ribbon_plots <- function(modname){
     rename("Latitude" = value_tmp, "Year" = year) %>% 
     mutate(name = factor(name, levels=c('DRM','Observed','GAM','Persistence')))
   
+  centroid_50 <- drm_centroids |> 
+    group_by(year) |>
+    summarise(
+      lower = {
+        h <- coda::HPDinterval(coda::as.mcmc(centroid_proj), prob = 0.50)
+        h[1]
+      },
+      upper = {
+        h <- coda::HPDinterval(coda::as.mcmc(centroid_proj), prob = 0.50)
+        h[2]
+      },
+      .groups = "drop"
+    ) |>
+    mutate(ci_level = "50")
+  
+  centroid_80 <- drm_centroids |> 
+    group_by(year) |>
+    summarise(
+      lower = {
+        h <- coda::HPDinterval(coda::as.mcmc(centroid_proj), prob = 0.80)
+        h[1]
+      },
+      upper = {
+        h <- coda::HPDinterval(coda::as.mcmc(centroid_proj), prob = 0.80)
+        h[2]
+      },
+      .groups = "drop"
+    ) |>
+    mutate(ci_level = "80")
+  
+  centroid_95 <- drm_centroids |> 
+    group_by(year) |>
+    summarise(
+      lower = {
+        h <- coda::HPDinterval(coda::as.mcmc(centroid_proj), prob = 0.95)
+        h[1]
+      },
+      upper = {
+        h <- coda::HPDinterval(coda::as.mcmc(centroid_proj), prob = 0.95)
+        h[2]
+      },
+      .groups = "drop"
+    ) |>
+    mutate(ci_level = "95")
+  
+  centroid_ribbons <- bind_rows(centroid_50, centroid_80, centroid_95) |> 
+    mutate(ci_level = factor(ci_level, levels=c("95","80","50"))) # for plotting
+  
   gg_best_drm_centroid <- ggplot() +
-    stat_lineribbon(data = drm_centroids, aes(x=year, y=centroid_proj)) + 
+    geom_ribbon(data = centroid_ribbons, aes(x=year, ymin=lower, ymax=upper, fill=ci_level), alpha = 0.7) +
     geom_line(data = centroids_for_ribbon_plot, 
               aes(x=Year, y=Latitude, color=name), lwd = 1) + 
     scale_x_continuous(breaks =seq(2007, 2016, 1), limits=c(2007, 2016)) + 
@@ -438,8 +504,59 @@ generate_drm_ribbon_plots <- function(modname){
     rename("Latitude" = value_tmp, "Year" = year) %>% 
     mutate(name = factor(name, levels=c('DRM','Observed','GAM','Persistence')))
   
+  cold_edge_50 <- drm_edges |> 
+    filter(quantile == 0.95) |> # get cold edge only 
+    group_by(year) |>
+    summarise(
+      lower = {
+        h <- coda::HPDinterval(coda::as.mcmc(range_quantiles_proj), prob = 0.50)
+        h[1]
+      },
+      upper = {
+        h <- coda::HPDinterval(coda::as.mcmc(range_quantiles_proj), prob = 0.50)
+        h[2]
+      },
+      .groups = "drop"
+    ) |>
+    mutate(ci_level = "50")
+  
+  cold_edge_80 <- drm_edges |> 
+    filter(quantile == 0.95) |> # get cold edge only 
+    group_by(year) |>
+    summarise(
+      lower = {
+        h <- coda::HPDinterval(coda::as.mcmc(range_quantiles_proj), prob = 0.80)
+        h[1]
+      },
+      upper = {
+        h <- coda::HPDinterval(coda::as.mcmc(range_quantiles_proj), prob = 0.80)
+        h[2]
+      },
+      .groups = "drop"
+    ) |>
+    mutate(ci_level = "80")
+  
+  cold_edge_95 <- drm_edges |> 
+    filter(quantile == 0.95) |> # get cold edge only 
+    group_by(year) |>
+    summarise(
+      lower = {
+        h <- coda::HPDinterval(coda::as.mcmc(range_quantiles_proj), prob = 0.95)
+        h[1]
+      },
+      upper = {
+        h <- coda::HPDinterval(coda::as.mcmc(range_quantiles_proj), prob = 0.95)
+        h[2]
+      },
+      .groups = "drop"
+    ) |>
+    mutate(ci_level = "95")
+  
+ cold_edge_ribbons <- bind_rows(cold_edge_50, cold_edge_80, cold_edge_95) |> 
+    mutate(ci_level = factor(ci_level, levels=c("95","80","50"))) # for plotting
+  
   gg_best_drm_cold_edge <- ggplot() +
-    stat_lineribbon(data = drm_edges |> filter(quantile == 0.95), aes(x=year, y=range_quantiles_proj)) + 
+    geom_ribbon(data = cold_edge_ribbons, aes(x=year, ymin=lower, ymax=upper, fill=ci_level), alpha = 0.7) +
     geom_line(data = cold_edges_for_ribbon_plot, 
               aes(x=Year, y=Latitude, color=name), lwd = 1) + 
     scale_x_continuous(breaks =seq(2007, 2016, 1), limits=c(2007, 2016)) + 
@@ -465,8 +582,63 @@ generate_drm_ribbon_plots <- function(modname){
     rename("Latitude" = value_tmp, "Year" = year) %>% 
     mutate(name = factor(name, levels=c('DRM','Observed','GAM','Persistence')))
   
+  
+  warm_edge_50 <- drm_edges |> 
+    filter(quantile == 0.05) |>  
+    group_by(year) |>
+    summarise(
+      lower = {
+        h <- coda::HPDinterval(coda::as.mcmc(range_quantiles_proj), prob = 0.50)
+        h[1]
+      },
+      upper = {
+        h <- coda::HPDinterval(coda::as.mcmc(range_quantiles_proj), prob = 0.50)
+        h[2]
+      },
+      .groups = "drop"
+    ) |>
+    mutate(ci_level = "50")
+  
+  warm_edge_80 <- drm_edges |> 
+    filter(quantile == 0.05) |>   
+    group_by(year) |>
+    summarise(
+      lower = {
+        h <- coda::HPDinterval(coda::as.mcmc(range_quantiles_proj), prob = 0.80)
+        h[1]
+      },
+      upper = {
+        h <- coda::HPDinterval(coda::as.mcmc(range_quantiles_proj), prob = 0.80)
+        h[2]
+      },
+      .groups = "drop"
+    ) |>
+    mutate(ci_level = "80")
+  
+  warm_edge_95 <- drm_edges |> 
+    filter(quantile == 0.05) |>  
+    group_by(year) |>
+    summarise(
+      lower = {
+        h <- coda::HPDinterval(coda::as.mcmc(range_quantiles_proj), prob = 0.95)
+        h[1]
+      },
+      upper = {
+        h <- coda::HPDinterval(coda::as.mcmc(range_quantiles_proj), prob = 0.95)
+        h[2]
+      },
+      .groups = "drop"
+    ) |>
+    mutate(ci_level = "95")
+  
+  warm_edge_ribbons <- bind_rows(warm_edge_50, warm_edge_80, warm_edge_95) |> 
+    mutate(ci_level = factor(ci_level, levels=c("95","80","50"))) # for plotting
+  
+  
+  
+  
   gg_best_drm_warm_edge <- ggplot() +
-    stat_lineribbon(data = drm_edges |> filter(quantile == 0.05), aes(x=year, y=range_quantiles_proj)) + 
+    geom_ribbon(data = warm_edge_ribbons, aes(x=year, ymin=lower, ymax=upper, fill=ci_level), alpha = 0.7) +
     geom_line(data = warm_edges_for_ribbon_plot, 
               aes(x=Year, y=Latitude, color=name), lwd = 1) + 
     scale_x_continuous(breaks =seq(2007, 2016, 1), limits=c(2007, 2016)) + 
