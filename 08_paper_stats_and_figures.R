@@ -560,7 +560,7 @@ generate_drm_ribbon_plots <- function(modname){
     geom_line(data = cold_edges_for_ribbon_plot, 
               aes(x=Year, y=Latitude, color=name), lwd = 1) + 
     scale_x_continuous(breaks =seq(2007, 2016, 1), limits=c(2007, 2016)) + 
-    scale_y_continuous(breaks = seq(38, 44, 1), labels =  seq(38, 44, 1), limits=c(38, 44)) +
+    scale_y_continuous(breaks = seq(39, 44, 1), labels =  seq(39, 44, 1), limits=c(38, 44)) +
     scale_color_manual(values=c("black", "#E20134","#8400CD","#009F81"), name="") + 
     #  scale_fill_manual(values=c("#E20134","#8400CD","#009F81"), name="") + 
     scale_fill_brewer(#name = "Credible Interval", 
@@ -642,8 +642,8 @@ generate_drm_ribbon_plots <- function(modname){
     geom_line(data = warm_edges_for_ribbon_plot, 
               aes(x=Year, y=Latitude, color=name), lwd = 1) + 
     scale_x_continuous(breaks =seq(2007, 2016, 1), limits=c(2007, 2016)) + 
-    scale_y_continuous(breaks = seq(34, 38, 1), labels =  seq(34, 38, 1), 
-                       limits=c(33.5, 38.5)) +
+    scale_y_continuous(breaks = seq(35, 38, 1), labels =  seq(35, 38, 1), 
+                       limits=c(34.5, 38.5)) +
     scale_color_manual(values=c("black", "#E20134","#8400CD","#009F81"), name="") + 
     #  scale_fill_manual(values=c("#E20134","#8400CD","#009F81"), name="") + 
     scale_fill_brewer(#name = "Credible Interval", 
