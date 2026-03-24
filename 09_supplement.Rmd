@@ -76,7 +76,7 @@ param_table_df <- data.frame(
   Paper = c(
     "$D_{p, t}$",
     "$\\sigma_{obs}$",
-    "$m$",
+    "$est_m$",
     "$f_{a, t}$",
     "$\\beta_0$",
     "$\\beta_1$",
@@ -198,7 +198,7 @@ btemp.train.tbl <- draws_btemp_train |>
   mutate(HPDI = paste0(signif(HPDI_lower, 3), " — ", signif(HPDI_upper, 3)), .keep="unused")
 
 
-kbl(btemp.train.tbl, booktabs = TRUE, caption = "Bayesian linear regressions of sea bottom temperature (measured in the trawl surveys) on year within each patch during the model training interval (1972-2006) with Gaussian errors, summarized by the median and 95% Highest Posterior Density Interval (HPDI) of the posterior estimate for the slope term. Values are truncated at three significant digits.",
+kbl(btemp.train.tbl, booktabs = TRUE, caption = "Bayesian linear regressions of sea bottom temperature (measured in the trawl surveys) on year within each patch during the model training interval (1972-2006) with Gaussian errors, summarized by the median and 95\\% Highest Posterior Density Interval (HPDI) of the posterior estimate for the slope term. Values are truncated at three significant digits.",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 ```
@@ -252,7 +252,7 @@ btemp.test.tbl <- draws_btemp_test |>
   mutate(HPDI = paste0(signif(HPDI_lower, 3), " — ", signif(HPDI_upper, 3)), .keep="unused")
 
 
-kbl(btemp.train.tbl, booktabs = TRUE, caption = "Bayesian linear regressions of sea bottom temperature (measured in the trawl surveys) on year within each patch during the model testing interval (2007-2016) with Gaussian errors, summarized by the median and 95% Highest Posterior Density Interval (HPDI) of the posterior estimate for the slope term. Values are truncated at three significant digits.",
+kbl(btemp.test.tbl, booktabs = TRUE, caption = "Bayesian linear regressions of sea bottom temperature (measured in the trawl surveys) on year within each patch during the model testing interval (2007-2016) with Gaussian errors, summarized by the median and 95\\% Highest Posterior Density Interval (HPDI) of the posterior estimate for the slope term. Values are truncated at three significant digits.",
     escape = FALSE) %>%
   kable_styling(font_size = 8, latex_options = c("striped"), full_width=TRUE)
 ```
