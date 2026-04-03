@@ -6,3 +6,4 @@
 old/
 src/*.rds
 pinskylab-*/*
+/sandbox-files/
