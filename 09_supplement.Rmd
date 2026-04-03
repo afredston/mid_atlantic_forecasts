@@ -667,3 +667,16 @@ dat_mod_by_yr |>
         strip.text.x = element_text(size = 7))
 ```
 
+```{r cite-packages, message=FALSE, warning=FALSE}
+
+library(grateful)
+
+
+cite_packages(
+  output = "paragraph",         
+  out.dir = ".",               
+  bib.file = "grateful-refs",   
+  include.RStudio = FALSE      
+)
+```
+
