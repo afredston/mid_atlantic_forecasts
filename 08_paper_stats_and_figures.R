@@ -560,7 +560,7 @@ generate_drm_ribbon_plots <- function(modname){
     geom_line(data = cold_edges_for_ribbon_plot, 
               aes(x=Year, y=Latitude, color=name), lwd = 1) + 
     scale_x_continuous(breaks =seq(2007, 2016, 1), limits=c(2007, 2016)) + 
-    scale_y_continuous(breaks = seq(39, 44, 1), labels =  seq(39, 44, 1), limits=c(38, 44)) +
+    scale_y_continuous(breaks = seq(39, 44, 1), labels =  seq(39, 44, 1), limits=c(39, 44)) +
     scale_color_manual(values=c("black", "#E20134","#8400CD","#009F81"), name="") + 
     #  scale_fill_manual(values=c("#E20134","#8400CD","#009F81"), name="") + 
     scale_fill_brewer(#name = "Credible Interval", 

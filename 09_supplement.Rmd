@@ -12,6 +12,8 @@ header-includes:
 editor_options: 
   markdown: 
     wrap: 72
+bibliography: 
+  - grateful-refs.bib
 ---
 
 ```{r setup, echo=FALSE, results="hide",message=FALSE, warning=FALSE, include=FALSE}
@@ -76,7 +78,7 @@ param_table_df <- data.frame(
   Paper = c(
     "$D_{p, t}$",
     "$\\sigma_{obs}$",
-    "$est_m$",
+    "$m$",
     "$f_{a, t}$",
     "$\\beta_0$",
     "$\\beta_1$",
@@ -95,7 +97,7 @@ param_table_df <- data.frame(
   Code = c(
     "dens",
     "sigma_obs",
-    "m",
+    "est_m",
     "f",
     "beta_obs_int",
     "beta_obs",
@@ -139,7 +141,8 @@ boop <- rbind(
   data.frame(Parameter = "$\\beta_{tax}$", `Prior Distribution` = "Normal $\\sim (0, 2)$"),
   data.frame(Parameter = "$\\alpha$", `Prior Distribution` = "Beta $\\sim (12, 20)$"),
   data.frame(Parameter = "$\\mu_r$", `Prior Distribution` = "Lognormal $\\sim (7, 5)$"),
-  data.frame(Parameter = "$m_e$", `Prior Distribution` = "Exponential $\\sim 2.3$")
+  data.frame(Parameter = "$m$", `Prior Distribution` = "Normal $\\sim (0.25, 0.1)$"), 
+  data.frame(Parameter = "$\\gamma$", `Prior Distribution` = "Exponential $\\sim 2.3$")
 )
 
 # leaving out init_dep, selectivity parameters, and m (its prior is just m) 
@@ -667,6 +670,11 @@ dat_mod_by_yr |>
         strip.text.x = element_text(size = 7))
 ```
 
+
+\clearpage
+
+\section*{}
+
 ```{r cite-packages, message=FALSE, warning=FALSE}
 
 library(grateful)
@@ -679,4 +687,8 @@ cite_packages(
   include.RStudio = FALSE      
 )
 ```
+
+\newpage
+
+# References
 
