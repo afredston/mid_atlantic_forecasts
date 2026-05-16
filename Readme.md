@@ -18,23 +18,41 @@ This repository is organized as follows:
 
 R scripts are all in the main project folder. 
 
-## Code description
+### Exploring our results
 
-## Exploring our results
+Here's a summary of what each script does and the data files it generates. If you don't want to re-generate source dataframes and model outputs yourself, you can run the last two scripts using entirely output files that are included in this repository---there's a detailed description of those files below. 
 
-Here's a summary of what each script does and the data files it generates. If you don't want to re-generate source dataframes and model outputs yourself, you can run the last two scripts using entirely output files that are included in this repository. 
-
+### Code description 
 
 | Script | Description | Outputs | Notes |
 | --- | --- | --- | --- |
-| `01_import_summer_flounder.R` | Imports, cleans, and reshapes fish data | `processed-data/flounder_catch_at_length_fall_training.csv`, `processed-data/flounder_catch_at_length_fall_testing.csv`, `processed-data/flounder_catch_fall_training.csv`, `processed-data/flounder_catch_fall_testing.csv` | To run this you need to download the 2020 [OceanAdapt](oceanadapt.rutgers.edu) release from this stable DOI: [10.5281/zenodo.3885625](https://zenodo.org/record/3885625), save it somewhere, and update the [file path](https://github.com/afredston/mid_atlantic_forecasts/blob/main/01_import_summer_flounder.R#L31) |
-| `02_get_summer_flounder_params.R` | Extracts parameters from summer flounder stock assessment tables using the `tabulizer` package |  `processed-data/summer_flounder_F_by_age.csv`, `processed-data/summer_flounder_F.csv`, `processed-data/summer_flounder_wt_at_age.csv` | Note that `tabulizer` is deprecated now so this is challenging to re-run 
+| `01_import_summer_flounder.R` | Imports, cleans, and reshapes fish data | In `/processed-data/`:  `flounder_catch_at_length_fall_training.csv`, `flounder_catch_at_length_fall_testing.csv`, `flounder_catch_fall_training.csv`, `flounder_catch_fall_testing.csv` | To run this you need to download the 2020 [OceanAdapt](oceanadapt.rutgers.edu) release from this stable DOI: [10.5281/zenodo.3885625](https://zenodo.org/record/3885625), save it somewhere, and update the [file path](https://github.com/afredston/mid_atlantic_forecasts/blob/main/01_import_summer_flounder.R#L31) |
+| `02_get_summer_flounder_params.R` | Extracts parameters from summer flounder stock assessment tables using the `tabulizer` package |  In `/processed-data/`: `summer_flounder_F_by_age.csv`, `summer_flounder_F.csv`, `summer_flounder_wt_at_age.csv` | Note that `tabulizer` is deprecated now so this is challenging to re-run 
 | `03_prep_stan_data.R` | Reshapes data for the DRM and writes out a lot of starting values for the model | `processed-data/stan_data_prep.Rdata` | |
-| `04_run_drms.R` | Runs the models using the Stan script `src/process_sdm.stan`, the function `functions/fit_drm.R`, and the file `ctrl_file_used.csv` | Various model objects stored in `results/v0.13/`, `results/v0.39/`, `results/v0.40/`, `results/v0.41/` | These models are highly memory- and storage-intensive, and set up to run in parallel on a HPC |
+| `04_run_drms.R` | Runs the models using the Stan script `src/process_sdm.stan`, the function `functions/fit_drm.R`, and the file `ctrl_file_used.csv` | Model outputs stored in `results/v0.13/`, `results/v0.39/`, `results/v0.40/`, `results/v0.41/` | These models are highly memory- and storage-intensive, and set up to run in parallel on a HPC |
 | `05_convergence_checks.R` | Reads in fitted DRMs and writes out diagnostics |  `diagnostic_fit.rds` in all the model results folders above, and `results/convergence_checks.rds` | Set up to run in parallel on an HPC | 
-| `06_model_evaluation.R` | Iterates over converged models, creates alternative models (SDMs, persistence forecast), quantifies model skill, and writes out summaries of estimates and performance metrics for all models | `processed-data/dat_train_patch.csv`, `processed-data/dat_test_patch.csv`, `processed-data/time_series_summary_stats.csv`, `processed-data/gam_density_time.csv`, `processed-data/points_for_plot.csv`, `processed-data/posteriors_for_model_evaluation.csv`, `processed-data/model_performance_by_year.csv`, `processed-data/model_comparison_summary.csv` | | 
+| `06_model_evaluation.R` | Iterates over converged models, creates alternative models (SDMs, persistence forecast), quantifies model skill, and writes out summaries of estimates and performance metrics for all models | In `/processed-data/`: `dat_train_patch.csv`, `dat_test_patch.csv`, `time_series_summary_stats.csv`, `gam_density_time.csv`, `points_for_plot.csv`, `posteriors_for_model_evaluation.csv`, `model_performance_by_year.csv`, `model_comparison_summary.csv` | | 
 | `07_thin_posteriors.R` | Thins the Stan outputs | All posteriors in the `results/v0.13/`, `results/v0.39/`, `results/v0.40/`, `results/v0.41/` folders | Set up to run in parallel on an HPC |
-| `08_paper_stats_and_figures.R` | Calculates all statistics in the paper and generates all the plots | Figures in `/results/` | HPC is not mandatory here, but most statistics are calculated with the "brms" package, which can be slow |
+| `08_paper_stats_and_figures.R` | Calculates all statistics in the paper and generates all the plots | Figures in `/results/` | HPC is not mandatory here, but most statistics are calculated with the `brms` package, which can be slow |
 |`09_supplement.Rmd` | Generates the supplementary materials for the paper | `09_supplement.pdf` | | 
 
+### Available outputs 
+
+The data files generated by this project (all in `processed-data`) are (in alphabetical order):
+* `dat_test_patch.csv`: Summary statistics (cold edge, warm edge, and centroid) of observed (trawl) data in the testing period (2007-2016), to pass to models 
+* `dat_train_patch.csv`: Summary statistics (cold edge, warm edge, and centroid) of observed (trawl) data in the training period (1972-2006), to pass to models
+* `flounder_catch_at_length_fall_testing.csv`: Raw catch data from the trawl survey, reported in counts by length bins, from 2007-2016
+* `flounder_catch_at_length_fall_training.csv`: Raw catch data from the trawl survey, reported in counts by length bins, from 1972-2006
+* `flounder_catch_fall_testing.csv`: Raw catch data from the trawl survey, reported in counts, from 2007-2016
+* `flounder_catch_fall_training.csv`: Raw catch data from the trawl survey, reported in counts, from 1972-2006
+* `gam_density_time.csv`: Results of GAM SDM, reported as density predicted in each latitude band in each year 
+* `model_comparison_summary.csv`: Bias and RMSE statistics calculated for all models in the main text 
+* `model_performance_by_year.csv`: Annual residuals calculated for all models in the main text
+* `points_for_plot.csv`: Summary statistics (cold edge, warm edge, and centroid) of observed data and models reported in the main text for the testing interval 
+* `posteriors_for_model_evaluation.csv`: Posterior distributions for DRMs in the main text (cold edge, warm edge, and centroid)
+* `sbt_isotherms.rds`: Annual positions of bottom temperature isotherms in the region 
+* `stan_data_prep.Rdata`: Holds the training data and many model parameters for the DRM (note that some parameters are specified in `functions/fit_drm.R`)
+* `summer_flounder_F_by_age.csv`: Digitized table from stock assessment of F at age over time
+* `summer_flounder_wt_by_age.csv`: Digitized table from stock assessment of weight at age over time
+* `time_series_summary_stats.csv`: Summary statistics (cold edge, warm edge, and centroid) of observed (trawl) data over the entire study period (1972-2016), for plots etc 
 
