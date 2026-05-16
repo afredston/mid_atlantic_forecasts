@@ -206,61 +206,65 @@ isos <- seq(9, 15, 2)  # these are the isotherms we want to plot
 # workflow is to fit models to temperature ~ latitude in every year and then use those to predict latitude given temperature 
 # these are intentionally not pooled at all because we are just using them to calculate the location of isotherms in a given year (so we don't want to borrow information across years)
 
-if(run_in_parallel==TRUE) {
-  library(foreach)
-  library(doParallel)
-  
-  cl <- makeCluster(n_cores) 
-  registerDoParallel(cl)
-  
-  dat_isos <- foreach(i = c(years, years_proj), .combine = bind_rows, .packages = c("brms","dplyr")) %dopar% 
+if(!file.exists(here("processed-data","sbt_isotherms.rds"))) {
+  if(run_in_parallel==TRUE) {
+    library(foreach)
+    library(doParallel)
     
-    {
+    cl <- makeCluster(n_cores) 
+    registerDoParallel(cl)
+    
+    dat_isos <- foreach(i = c(years, years_proj), .combine = bind_rows, .packages = c("brms","dplyr")) %dopar% 
       
+      {
+        
+        dat_bind <- bind_rows(dat_catchonly, dat_test_catchonly) |> 
+          select(btemp, year, lat) |> 
+          filter(year==i) 
+        
+        brm_tmp <- brm(btemp ~ lat, data = dat_bind, family = gaussian(), chains = 4, iter = 2000) # this isn't a mistake, there is a reason the model predicts temperature not latitude. if we do lat ~ temp, the isotherms get very flattened, because the model treats the predictor variable as "known" (and there isn't as much variation in latitude as there is in temperature). if we plot temperature vs latitude, there's a lot more variation in temperature. putting btemp as the x-variable, even though it's intuitive because we want to "plug in" isotherm values later, basically throws all that out because the regression is only trying to deal with variation in y given a fixed x. flipping this, so that we're predicting temperature with latitude, is more statistically correct (we're predicting the unknown, variable thing with the known, fixed thing) and lets the model accurately estimate the central tendency and spread of temperatures at a given latitude. then we just invert the formula for a linear regression below to pull out isotherm latitudes. 
+        brm_tmp_draws <- as_draws_df(brm_tmp)
+        
+        tibble(
+          isotherm = isos,
+          lat = vapply(isos, function(j) {
+            median((j - brm_tmp_draws$b_Intercept) / brm_tmp_draws$b_lat)
+          }, numeric(1)),
+          year = i
+        )
+        
+      }
+    
+    stopCluster(cl)
+    
+  }
+  write_rds(dat_isos, here("processed-data","sbt_isotherms.rds"))
+  
+  
+  if(run_in_parallel==FALSE) {
+    dat_isos <- NULL
+    out <- NULL
+    for(i in c(years, years_proj)) {
       dat_bind <- bind_rows(dat_catchonly, dat_test_catchonly) |> 
         select(btemp, year, lat) |> 
         filter(year==i) 
       
-      brm_tmp <- brm(btemp ~ lat, data = dat_bind, family = gaussian(), chains = 4, iter = 2000) # this isn't a mistake, there is a reason the model predicts temperature not latitude. if we do lat ~ temp, the isotherms get very flattened, because the model treats the predictor variable as "known" (and there isn't as much variation in latitude as there is in temperature). if we plot temperature vs latitude, there's a lot more variation in temperature. putting btemp as the x-variable, even though it's intuitive because we want to "plug in" isotherm values later, basically throws all that out because the regression is only trying to deal with variation in y given a fixed x. flipping this, so that we're predicting temperature with latitude, is more statistically correct (we're predicting the unknown, variable thing with the known, fixed thing) and lets the model accurately estimate the central tendency and spread of temperatures at a given latitude. then we just invert the formula for a linear regression below to pull out isotherm latitudes. 
+      brm_tmp <- brm(btemp ~ lat, data = dat_bind, family = gaussian(), chains = 4, iter = 2000)
       brm_tmp_draws <- as_draws_df(brm_tmp)
       
-      tibble(
-        isotherm = isos,
-        lat = vapply(isos, function(j) {
-          median((j - brm_tmp_draws$b_Intercept) / brm_tmp_draws$b_lat)
-        }, numeric(1)),
-        year = i
-      )
-      
+      for(j in isos){
+        pred <- (j - brm_tmp_draws$b_Intercept) / brm_tmp_draws$b_btemp 
+        out$isotherm <- j
+        out$lat <- median(pred)
+        out$year <- i
+        dat_isos <- bind_rows(dat_isos, out)
+      }
     }
-  
-  stopCluster(cl)
-  
-}
-write_rds(dat_isos, here("processed-data","sbt_isotherms.rds"))
-
-
-if(run_in_parallel==FALSE) {
-  dat_isos <- NULL
-  out <- NULL
-  for(i in c(years, years_proj)) {
-    dat_bind <- bind_rows(dat_catchonly, dat_test_catchonly) |> 
-      select(btemp, year, lat) |> 
-      filter(year==i) 
     
-    brm_tmp <- brm(btemp ~ lat, data = dat_bind, family = gaussian(), chains = 4, iter = 2000)
-    brm_tmp_draws <- as_draws_df(brm_tmp)
-    
-    for(j in isos){
-      pred <- (j - brm_tmp_draws$b_Intercept) / brm_tmp_draws$b_btemp 
-      out$isotherm <- j
-      out$lat <- median(pred)
-      out$year <- i
-      dat_isos <- bind_rows(dat_isos, out)
-    }
+    write_rds(dat_isos, here("processed-data","sbt_isotherms.rds"))
   }
-  
-  write_rds(dat_isos, here("processed-data","sbt_isotherms.rds"))
+  } else {
+    dat_isos <- read_rds(here("processed-data","sbt_isotherms.rds"))
 }
 
 # did the isotherms shift north? 
@@ -552,7 +556,7 @@ generate_drm_ribbon_plots <- function(modname){
     ) |>
     mutate(ci_level = "95")
   
- cold_edge_ribbons <- bind_rows(cold_edge_50, cold_edge_80, cold_edge_95) |> 
+  cold_edge_ribbons <- bind_rows(cold_edge_50, cold_edge_80, cold_edge_95) |> 
     mutate(ci_level = factor(ci_level, levels=c("95","80","50"))) # for plotting
   
   gg_best_drm_cold_edge <- ggplot() +

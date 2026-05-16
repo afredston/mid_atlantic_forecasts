@@ -160,5 +160,5 @@ write_csv(abund_len_flounder_test, here("processed-data","flounder_catch_at_leng
 write_csv(abund_flounder_train, here("processed-data","flounder_catch_fall_training.csv"))
 write_csv(abund_flounder_test, here("processed-data","flounder_catch_fall_testing.csv"))
 
-write_csv(bio_flounder_train, here("processed-data","flounder_biomass_fall_training.csv"))
-write_csv(bio_flounder_test, here("processed-data","flounder_biomass_fall_testing.csv"))
+#write_csv(bio_flounder_train, here("processed-data","flounder_biomass_fall_training.csv"))
+#write_csv(bio_flounder_test, here("processed-data","flounder_biomass_fall_testing.csv"))
