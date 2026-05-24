@@ -14,6 +14,7 @@ editor_options:
     wrap: 72
 bibliography: 
   - grateful-refs.bib
+csl: the-american-naturalist.csl # get_csl(name="the-american-naturalist", out.dir = here())
 ---
 
 ```{r setup, echo=FALSE, results="hide",message=FALSE, warning=FALSE, include=FALSE}
@@ -678,7 +679,6 @@ dat_mod_by_yr |>
 ```{r cite-packages, message=FALSE, warning=FALSE}
 
 library(grateful)
-
 
 cite_packages(
   output = "paragraph",         

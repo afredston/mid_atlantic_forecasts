@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.2.5)  3 APR 2026 18:04
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (TeX Live 2024) (preloaded format=pdflatex 2025.2.5)  24 MAY 2026 11:51
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -630,11 +630,6 @@ Package pdftex.def Info: 09_supplement_files/figure-latex/resid-by-yr-1.pdf  use
 
 
 ]
-LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <10> on input line 305.
-LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <7> on input line 305.
-
 
 [11]
 
@@ -645,18 +640,18 @@ L3 programming layer <2025-01-18>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 13145 strings out of 475172
- 204901 string characters out of 5765958
+ 13127 strings out of 475172
+ 204704 string characters out of 5765958
  647862 words of memory out of 5000000
- 35830 multiletter control sequences out of 15000+600000
- 596587 words of font info for 70 fonts, out of 8000000 for 9000
+ 35818 multiletter control sequences out of 15000+600000
+ 588555 words of font info for 60 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 89i,17n,93p,1542b,519s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 89i,17n,93p,1489b,519s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </home/afredsto/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></home/afredsto/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi6.pfb></home/afredsto/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi8.pfb></home/afredsto/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb></home/afredsto/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmr6.pfb></home/afredsto/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmr8.pfb></home/afredsto/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmri10.pfb></home/afredsto/.TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy8.pfb>
-Output written on 09_supplement.pdf (12 pages, 466800 bytes).
+Output written on 09_supplement.pdf (12 pages, 452555 bytes).
 PDF statistics:
- 306 PDF objects out of 1000 (max. 8388607)
- 255 compressed objects within 3 object streams
+ 296 PDF objects out of 1000 (max. 8388607)
+ 245 compressed objects within 3 object streams
  74 named destinations out of 1000 (max. 500000)
  49 words of extra memory for PDF output out of 10000 (max. 10000000)
 
