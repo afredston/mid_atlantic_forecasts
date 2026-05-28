@@ -18,6 +18,7 @@ library(directlabels)
 library(patchwork)
 library(brms)
 theme_set(theme_bw())
+calculate_stats <- FALSE
 
 # data
 dat <- read_csv(here("processed-data","flounder_catch_at_length_fall_training.csv"))
@@ -54,89 +55,92 @@ if(run_in_parallel == TRUE){
 # calculate all the statistics reported in-text (nothing gets saved in this code block, just printed to the console)
 ############
 
-# did temperature change in the trawl surveys across all time? 
-brm(btemp ~ year, 
-    data = bind_rows(dat_catchonly, dat_test_catchonly) %>%   select(btemp, year, lat),
-    family = gaussian(), 
-    cores = 4, 
-    chains = 4, 
-    iter = 2000
-)|>
-  posterior::as_draws_df() |>
-  (\(x) tibble::tibble(
-    term = "year",
-    median = median(x$b_year),
-    hpdi_lower = coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95)[1],
-    hpdi_upper = coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95)[2]
-  ))()
-
-# how many hauls? 
-length(unique(dat$haulid)) + length(unique(dat_test$haulid)) #12203
-nrow(dat_catchonly) + nrow(dat_test_catchonly) #12203 — should be the same as above
-
-# how many positive encounters? 
-nrow(dat_catchonly[dat_catchonly$abundance>0,]) + nrow(dat_test_catchonly[dat_test_catchonly$abundance>0,]) # 2308 
-
-# what percentage of hauls were positive encounters? 
-(nrow(dat_catchonly[dat_catchonly$abundance>0,]) + nrow(dat_test_catchonly[dat_test_catchonly$abundance>0,])) / (nrow(dat_catchonly) + nrow(dat_test_catchonly)) # 0.1891338
-
-# how frequently were more than 10 individuals caught? 
-nrow(bind_rows(dat_catchonly, dat_test_catchonly) %>% 
-       filter(abundance >= 10)) / nrow(bind_rows(dat_catchonly, dat_test_catchonly)) # 0.034
-
-# how many individuals caught? 
-sum(dat_catchonly$abundance) # 7713
-sum(dat_test_catchonly$abundance) # 6312
-
-# how many individuals caught per year?
-bind_rows(dat_catchonly, dat_test_catchonly) %>% 
-  group_by(year) %>% 
-  summarise(n=sum(abundance))
-
-# how many models passed convergence checks?
-divergence_cutoff <- 0.05
-chains_cutoff <- 3 
-nrow(convergence_checks %>% 
-       filter(mean_divergences <= divergence_cutoff, 
-              successful_chains >= chains_cutoff)) # all of them
-
-
-# did summer flounder shift north in the testing interval? 
-brm(value_tmp ~ year, 
-    data = points_for_plot %>% 
-      filter(name == 'Observed') %>% 
-      filter(feature == 'Centroid'),
-    family = gaussian(),
-    cores = 4) |> 
-  posterior::as_draws_df() |>
-  (\(x) coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95))()
-
-brm(value_tmp ~ year, 
-    data = points_for_plot %>% 
-      filter(name == 'Observed') %>% 
-      filter(feature == 'Warm Edge'),
-    family = gaussian(),
-    cores = 4) |> 
-  posterior::as_draws_df() |>
-  (\(x) coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95))()
-
-brm(value_tmp ~ year, 
-    data = points_for_plot %>% 
-      filter(name == 'Observed') %>% 
-      filter(feature == 'Cold Edge'),
-    family = gaussian(),
-    cores = 4) |> 
-  posterior::as_draws_df() |>
-  (\(x) coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95))()
-
-
-print(fixed_param_dat |> group_by(name, param) |> 
-        summarise(
-          median = median(value),
-          hpdi_lower = coda::HPDinterval(coda::as.mcmc(value), prob = 0.95)[1],
-          hpdi_upper = coda::HPDinterval(coda::as.mcmc(value), prob = 0.95)[2],
-          .groups = "drop"
-        ), n=28)
+if(calculate_stats==TRUE){
+  
+  # did temperature change in the trawl surveys across all time? 
+  brm(btemp ~ year, 
+      data = bind_rows(dat_catchonly, dat_test_catchonly) %>%   select(btemp, year, lat),
+      family = gaussian(), 
+      cores = 4, 
+      chains = 4, 
+      iter = 2000
+  )|>
+    posterior::as_draws_df() |>
+    (\(x) tibble::tibble(
+      term = "year",
+      median = median(x$b_year),
+      hpdi_lower = coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95)[1],
+      hpdi_upper = coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95)[2]
+    ))()
+  
+  # how many hauls? 
+  length(unique(dat$haulid)) + length(unique(dat_test$haulid)) #12203
+  nrow(dat_catchonly) + nrow(dat_test_catchonly) #12203 — should be the same as above
+  
+  # how many positive encounters? 
+  nrow(dat_catchonly[dat_catchonly$abundance>0,]) + nrow(dat_test_catchonly[dat_test_catchonly$abundance>0,]) # 2308 
+  
+  # what percentage of hauls were positive encounters? 
+  (nrow(dat_catchonly[dat_catchonly$abundance>0,]) + nrow(dat_test_catchonly[dat_test_catchonly$abundance>0,])) / (nrow(dat_catchonly) + nrow(dat_test_catchonly)) # 0.1891338
+  
+  # how frequently were more than 10 individuals caught? 
+  nrow(bind_rows(dat_catchonly, dat_test_catchonly) %>% 
+         filter(abundance >= 10)) / nrow(bind_rows(dat_catchonly, dat_test_catchonly)) # 0.034
+  
+  # how many individuals caught? 
+  sum(dat_catchonly$abundance) # 7713
+  sum(dat_test_catchonly$abundance) # 6312
+  
+  # how many individuals caught per year?
+  bind_rows(dat_catchonly, dat_test_catchonly) %>% 
+    group_by(year) %>% 
+    summarise(n=sum(abundance))
+  
+  # how many models passed convergence checks?
+  divergence_cutoff <- 0.05
+  chains_cutoff <- 3 
+  nrow(convergence_checks %>% 
+         filter(mean_divergences <= divergence_cutoff, 
+                successful_chains >= chains_cutoff)) # all of them
+  
+  
+  # did summer flounder shift north in the testing interval? 
+  brm(value_tmp ~ year, 
+      data = points_for_plot %>% 
+        filter(name == 'Observed') %>% 
+        filter(feature == 'Centroid'),
+      family = gaussian(),
+      cores = 4) |> 
+    posterior::as_draws_df() |>
+    (\(x) coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95))()
+  
+  brm(value_tmp ~ year, 
+      data = points_for_plot %>% 
+        filter(name == 'Observed') %>% 
+        filter(feature == 'Warm Edge'),
+      family = gaussian(),
+      cores = 4) |> 
+    posterior::as_draws_df() |>
+    (\(x) coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95))()
+  
+  brm(value_tmp ~ year, 
+      data = points_for_plot %>% 
+        filter(name == 'Observed') %>% 
+        filter(feature == 'Cold Edge'),
+      family = gaussian(),
+      cores = 4) |> 
+    posterior::as_draws_df() |>
+    (\(x) coda::HPDinterval(coda::as.mcmc(x$b_year), prob = 0.95))()
+  
+  
+  print(fixed_param_dat |> group_by(name, param) |> 
+          summarise(
+            median = median(value),
+            hpdi_lower = coda::HPDinterval(coda::as.mcmc(value), prob = 0.95)[1],
+            hpdi_upper = coda::HPDinterval(coda::as.mcmc(value), prob = 0.95)[2],
+            .groups = "drop"
+          ), n=28)
+}
 
 ############
 # make area map figure
@@ -159,41 +163,33 @@ recs <- data_frame(ymin = patches,
                    xmax = xmin + 2,
                    x = xmin + (xmax-xmin)/2, 
                    y = ymin + 0.5
-) # be sure to note that rectangle width is approximate
-
-recs2 <- recs %>% 
-  select(y, xmax, xmin)  %>%
-  pivot_longer(cols = c(xmax, xmin), names_to="identity", values_to="x") %>% 
-  group_by(y) %>% 
-  mutate(meanx = mean(x),
-         newcol = x - min(x)) # plus or minus? 
+) # note that rectangle width is approximate
 
 state_points <- cbind(st_centroid(states), st_coordinates(st_centroid(states$geometry))) %>% 
   select(X, Y, name, postal) %>% 
   mutate(
-    X = ifelse(postal=='NJ', X+0.25, X)) %>% 
+    X = ifelse(postal=='NJ', X+0.25, X),
+    Y = ifelse(postal=='ME', Y-0.65, Y),
+    Y = ifelse(postal=='DE', Y+0.3, Y)) %>% 
   filter(!postal == "DC") # nudge for plotting 
 
 ggmap <- ggplot(data = states) +
   geom_rect(data=recs, mapping=aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax), color="black",  alpha=0.5) +
   geom_sf(fill = "grey92") +
-  # geom_point(data=hauldat, aes(x=lon, y=lat), color="black", fill="black", size=0.1) +
   xlab("Longitude") + ylab("Latitude") +
   annotation_scale(location = "bl", width_hint = 0.5, pad_x = unit(1, "in")) +
   annotation_north_arrow(location = "bl", which_north = "true", 
-                         pad_x = unit(2.75, "in"), pad_y = unit(0.5, "in"),
+                         pad_x = unit(2.5, "in"), pad_y = unit(0.25, "in"),
                          style = north_arrow_fancy_orienteering) +
   geom_text(data= state_points,aes(x=X, y=Y, label=postal),
             color = "black", fontface = "bold", check_overlap = FALSE, position="dodge") +
-  # geom_rect(data=recs, mapping=aes(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax), color="black",  alpha=0.5) +
-  #  geom_tile(data = recs2, aes(x=meanx, y=y, width=2, height=1, fill=newcol), color="black") +
   scale_fill_gradient(low="darkblue", high="white") +
   coord_sf(xlim = c(-80, -65), ylim = c(34, 45.5), expand = FALSE) +
   annotate(geom = "text", x = -69.5, y = 38, label = "Atlantic Ocean", 
            fontface = "italic", color = "grey22", size = 6)  +
   NULL
 
-ggsave(ggmap, filename=here("results","area_map.png"), width=110, height=110, dpi=600, units="mm")
+ggsave(ggmap, filename=here("results","area_map.png"), width=8.2, height=7.5, dpi=1200, units="cm", scale=1.3) # for single-column width in Am Nat 
 
 ############
 # make hovmoller plot 
@@ -263,34 +259,35 @@ if(!file.exists(here("processed-data","sbt_isotherms.rds"))) {
     
     write_rds(dat_isos, here("processed-data","sbt_isotherms.rds"))
   }
-  } else {
-    dat_isos <- read_rds(here("processed-data","sbt_isotherms.rds"))
+} else {
+  dat_isos <- read_rds(here("processed-data","sbt_isotherms.rds"))
 }
 
 # did the isotherms shift north? 
-dat_isos %>%
-  group_by(isotherm) %>%
-  nest() %>%
-  mutate(
-    model = purrr::map(
-      data,
-      ~ brm(
-        lat ~ year,
-        data = .x,
-        family = gaussian(),
-        chains = 4,
-        iter = 2000,
-        refresh = 0
+if(calculate_stats==TRUE){
+  dat_isos %>%
+    group_by(isotherm) %>%
+    nest() %>%
+    mutate(
+      model = purrr::map(
+        data,
+        ~ brm(
+          lat ~ year,
+          data = .x,
+          family = gaussian(),
+          chains = 4,
+          iter = 2000,
+          refresh = 0
+        )
+      ),
+      tidymodel = purrr::map(
+        model,
+        ~ broom.mixed::tidy(.x, effects = "fixed")
       )
-    ),
-    tidymodel = purrr::map(
-      model,
-      ~ broom.mixed::tidy(.x, effects = "fixed")
-    )
-  ) %>%
-  unnest(tidymodel) %>%
-  dplyr::select(-data, -model)
-
+    ) %>%
+    unnest(tidymodel) %>%
+    dplyr::select(-data, -model)
+}
 
 # get bottom temperature data for plot 
 dat_btemp <- bind_rows(dat_catchonly, dat_test_catchonly) %>% 
@@ -304,21 +301,21 @@ gg_btemp <- ggplot() +
   scale_fill_gradientn(colors=c("blue3","darkturquoise", "gold", "orangered", "red3"), limits = c(6,24), breaks = c(seq(6, 24, 2)),
                        guide = guide_colourbar(nbin=100, draw.ulim = FALSE, draw.llim = FALSE)) + 
   geom_line(data=dat_isos, aes(x=year, y=lat, group=isotherm)) +
-  geom_dl(data=dat_isos, aes(x=year, y=lat, group=isotherm, label=isotherm), method=list(dl.trans(x = x + 0.5, y = y + 0.5, cex=0.8), "first.points")) +
+  geom_dl(data=dat_isos, aes(x=year, y=lat, group=isotherm, label=isotherm), method=list(dl.trans(x = x + 0.35, y = y + 0.5, cex=0.8), "first.points")) +
   scale_x_continuous(limits = c(1971, 2017), breaks=seq(1972, 2016, 4), expand = c(0, 0)) +
   scale_y_continuous(limits = c(34.5, 45.5), breaks=seq(35, 45, 1), expand = c(0, 0)) +
   labs(x="Year", y="Latitude") +
   theme_bw() +
-  theme(text=element_text(family="sans",size=12,color="black"),
+  theme(text=element_text(family="sans",size=10,color="black"),
         legend.text = element_text(size=12),
-        axis.text=element_text(family="sans",size=8,color="black"), 
+        axis.text=element_text(family="sans",size=10,color="black"), 
         axis.text.x = element_text(angle = 90, hjust = 1), 
         axis.title=element_text(family="sans",size=12,color="black"),
         plot.margin=margin(t = 15, r = 5, b = 5, l = 5, unit = "pt")) + 
-  guides(fill = guide_colourbar(barwidth = 0.75, barheight = 25, title="SBT", reverse=TRUE)) +
+  guides(fill = guide_colourbar(barwidth = 0.75, barheight = 15, title="SBT", reverse=TRUE)) +
   NULL
 
-ggsave(gg_btemp, filename=here("results","btemp_lat_time.png"), width=110, height=70, scale = 2.1, dpi=600, units="mm")
+ggsave(gg_btemp, filename=here("results","btemp_lat_time.png"), width=17, height=10.8, scale = 1, dpi=1200, units="cm")
 
 
 ############
@@ -351,11 +348,11 @@ gg_observed <- dat_test_dens %>%
   scale_y_continuous(breaks=seq(min(patches), max(patches), 1), limits=c(34.49, 44.51)) +
   scale_fill_viridis_c() + 
   guides(fill = guide_colorbar(theme = theme(legend.direction = "horizontal"))) +
-  theme(legend.position = c(0.3, 0.83), 
+  theme(legend.position = c(0.3, 0.84), 
         axis.text.x = element_text(angle = 45, vjust=0.8)) + 
   coord_cartesian(expand = FALSE) +
   NULL
-ggsave(gg_observed, filename=paste0(here("results"),"/tileplot_timeseries.png"), dpi=600, units="mm", width=75, height=50, scale = 1.7)
+ggsave(gg_observed, filename=paste0(here("results"),"/tileplot_timeseries.png"), dpi=1200, units="cm", width=17, height=8, scale = 1)
 
 
 ############
@@ -382,7 +379,7 @@ gg_mod_compare <- dat_mod_compare %>%
     #   name = reorder_within(name, value, list(metric, feature)) # this option ranks each subplot by its score so the points are sequential in value along the plot
   ) %>%  
   ggplot( )+
-  geom_point(aes(name, y=value, shape = type)) + 
+  geom_point(aes(name, y=value, shape = type), size=2) + 
   geom_hline(yintercept=0, linetype="dashed") + 
   coord_flip() + 
   #  scale_x_reordered() +
@@ -392,7 +389,10 @@ gg_mod_compare <- dat_mod_compare %>%
   theme(axis.title.x = element_blank(), 
         axis.title.y = element_blank(),
         axis.text.x = element_text(angle = 45),
-        legend.position = "none") +
+        legend.position = "none",
+        strip.text = element_text(face = "bold"),
+        strip.text.y = element_text(face = "bold"),
+        strip.text.x = element_text(face = "bold")) +
   ggh4x::facet_nested_wrap(~metric+feature, scales = "free") +
   ggh4x::facetted_pos_scales(
     x = list(COL == 2 ~ scale_x_discrete(guide = 'none'),
@@ -400,7 +400,7 @@ gg_mod_compare <- dat_mod_compare %>%
   ) +
   NULL
 
-ggsave(gg_mod_compare, filename=here("results","bias_v_rmse.png"), width=110, height=80, dpi=600, units="mm", scale=1.5)
+ggsave(gg_mod_compare, filename=here("results","bias_v_rmse.png"), width=17, height=12.25, dpi=1200, units="cm", scale=0.85)
 
 
 ############
@@ -665,8 +665,6 @@ generate_drm_ribbon_plots <- function(modname){
 
 gg_best_drm <- (wrap_elements(panel = grid::textGrob("DRM T-Recruit")) + wrap_elements(panel = grid::textGrob("DRM T-Mortality"))) / (generate_drm_ribbon_plots(mods_to_show[1]) | generate_drm_ribbon_plots(mods_to_show[2]))+
   plot_layout(heights = c(.05,1,1))
-
-gg_best_drm
 
 
 ggsave(gg_best_drm, filename=here("results", "best_drm_time.svg"), dpi=600, units="mm", width=75, height=130, scale = 2)
