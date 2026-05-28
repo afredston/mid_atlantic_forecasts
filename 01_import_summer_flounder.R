@@ -2,14 +2,12 @@
 # READ ME:
 
 # this script uses the 2020 release of OceanAdapt
-# to re-run it, you will need to download it
-# it can be downloaded from: https://zenodo.org/record/3885625
+# all the files from this source are in this repository in /raw-data/, so you don't need to go download them
+# this dataset was obtained from: https://zenodo.org/record/3885625
 # DOI 10.5281/zenodo.3885625
-# it should download a in folder called pinskylab-OceanAdapt-c913be5
-# you can place that directly in this repository, mid_atlantic_forecasts, for the relative file paths below to work
-# or to avoid cluttering up this repo, create a new folder inside it called pinskylab-OceanAdapt-c913be5, and move in only the needed files
-# the four files you will need are:
-# data_clean/dat_exploded.rds (this is a big file which is why we can't just put these all on github)
+
+# the four files used here are:
+# data_clean/dat_exploded.rds 
 # data_raw/neus_Survdat.RData
 # data_raw/neus_SVSPP.RData
 # data_raw/neus_fall_svsta.csv
@@ -18,8 +16,6 @@
 
 #################
 # This script pulls in summer flounder data from NOAA bottom trawl data
-# Manual data download is required (see below) 
-
 
 # load packages
 library(tidyverse)
@@ -28,20 +24,20 @@ library(stringr)
 library(lubridate)
 here <- here::here
 
-OApath <- "pinskylab-OceanAdapt-c913be5"
+OApath <- "raw-data" # update this if you put the data elsewhere
 
-dat_exploded <- readRDS(here(OApath,"data_clean","dat_exploded.rds")) # get zero-inflated survey data
+dat_exploded <- readRDS(here(OApath,"dat_exploded.rds")) # get zero-inflated survey data
 
 # get haul-level variables
-load(here(OApath,"data_raw","neus_Survdat.RData")) 
+load(here(OApath,"neus_Survdat.RData")) 
 
 # note that in the NEFSC survey you may need to aggregate across sex classes ('CATCHSEX' column) for correct abundance/length values. for summer flounder that column is always 0 so it's not an issue
 
 # get taxonomy
-load(here(OApath, "data_raw","neus_SVSPP.RData"))
+load(here(OApath,"neus_SVSPP.RData"))
 
 # get tow duration data 
-towdur_raw <- read_csv(here(OApath, "data_raw","neus_fall_svsta.csv"))
+towdur_raw <- read_csv(here(OApath,"neus_fall_svsta.csv"))
 
 spp_of_interest <- c("Paralichthys dentatus")
 reg_of_interest <- c("Northeast US Fall")
