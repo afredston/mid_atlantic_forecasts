@@ -4,7 +4,9 @@ Alexa Fredston,* Daniel Ovando,* Lucas da Cunha Godoy, Jude Kong, Brandon Muffle
 
 *Co-first authors
 
-To learn more about this project, please read the manuscript (link to be added soon; in the meantime [preprint is here](https://doi.org/10.32942/X24D00)). Please also cite that manuscript for any derivative use of the code. If you're interested in implementing DRMs yourself, check out [drmr](https://pinskylab.github.io/drmr/) and the associated [preprint](https://doi.org/10.32942/X2VT0N). 
+[![DOI](https://zenodo.org/badge/452908790.svg)](https://doi.org/10.5281/zenodo.20497629)
+
+To learn more about this project, please read the manuscript (link to be added soon; in the meantime [preprint is here](https://doi.org/10.32942/X24D00)). Please also cite that manuscript for any derivative use of the code, as well as the repository DOI above. If you're interested in implementing DRMs yourself, check out [drmr](https://pinskylab.github.io/drmr/) and the associated [preprint](https://doi.org/10.32942/X2VT0N). 
 
 ## Repository organization
 
